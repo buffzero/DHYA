@@ -552,20 +552,23 @@ input[type="checkbox"] {
   margin: 10px 0 16px;
   width: 100%; /* 占满可用宽度 */
 }
-/* 圆圈行 */
-.circles-row {
-  display: contents ;
-}
+
 /* 单个圆圈 */
-.circle {
-  width: 16px;
-  height: 16px;
+circle {
+  width: 20px;  /* PC端增大到20px */
+  height: 20px; /* PC端增大到20px */
   border-radius: 50%;
   border: 1px solid var(--gray-500);
   background: #dadada;
   flex-shrink: 0; /* 防止被压缩 */
 }
-
+/* 移动端保持原有大小 */
+@media (max-width: 600px) {
+  .circle {
+    width: 12px;
+    height: 12px;
+  }
+}
 /* 未核销的圆圈 */
 .circle:not(.filled) {
   background: #dadada;
