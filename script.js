@@ -508,13 +508,13 @@ const ResourceTracker = (() => {
                         <div class="training-header">
                             <div class="training-name">${item.name}</div>
                             <div class="training-input-status">
-                                <input type="text"
-                                    inputmode="numeric"
-                                    class="training-count-input" 
-                                    data-category="${category}" 
-                                    data-index="${index}"
-                                    value="${required}">
-                                <div class="sub-status-indicator ${isMet ? 'met' : 'not-met'}">
+                             `<input type="text"
+    inputmode="numeric"
+    class="training-count-input" 
+    data-category="${category}" 
+    data-index="${index}"
+    value="${required}"
+    onfocus="this.select()">`  // 添加onfocus事件自动选中文本
                                     ${isMet ? '已满足' : `${completed}/${required}`}
                                 </div>
                             </div>
@@ -777,7 +777,7 @@ const ResourceTracker = (() => {
                 updateAndSave();
             }
         });
-
+              
         // 2. 输入框监听
         const handleInputChange = (e) => {
             // 兵书数量输入
@@ -805,7 +805,14 @@ const ResourceTracker = (() => {
             }
         };
         document.addEventListener('input', handleInputChange);
-
+                // 添加输入框自动选中功能
+    document.addEventListener('focusin', (e) => {
+        if (e.target.classList.contains('training-count-input')) {
+            e.target.select(); // 自动选中文本方便直接输入
+            // 或者如果要清空内容：
+            // e.target.value = '';
+        }
+    });
         // 3. 按钮点击监听
         document.addEventListener('click', (e) => {
             // 核销按钮
