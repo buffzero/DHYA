@@ -507,24 +507,23 @@ const ResourceTracker = (() => {
                 const remaining = required - completed;
                 
                 return `
-                <div class="training-item">
-                    <div class="training-header">
-                        <div class="training-name">${item.name}</div>
-                        <div class="training-input-status">
-                            <input type="text"
-                             inputmode="numeric"
-                             class="training-count-input" 
-                             data-category="${category}" 
-                             data-index="${index}"
-                             value="${required}"
-                             onfocus="this.oldValue = this.value; this.select()"
-                             onblur="if(this.value === '') this.value = this.oldValue">  <!-- 新代码（保留原值） -->
-                            <div class="sub-status-indicator ${isMet ? 'met' : 'not-met'}">
-                                ${isMet ? '已满足' : `${completed}/${required}`}
-                            </div>
-                        </div>
+        <div class="training-item">
+            <div class="training-header">
+                <div class="training-name">${item.name}</div>
+                <div class="training-input-status">
+                    <input type="text"
+                        inputmode="numeric"
+                        class="training-count-input" 
+                        data-category="${category}" 
+                        data-index="${index}"
+                        value="${required}"
+                        onfocus="this.select()">  <!-- 修改后的简洁代码 -->
+                    <div class="sub-status-indicator ${isMet ? 'met' : 'not-met'}">
+                        ${isMet ? '已满足' : `${completed}/${required}`}
                     </div>
-                    ${required > 0 ? renderCircles(required, completed) : ''}
+                </div>
+            </div>
+            ${required > 0 ? renderCircles(required, completed) : ''}
                     <div class="training-actions">
                             <button class="consume-btn" 
                                 data-category="${category}" 
