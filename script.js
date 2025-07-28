@@ -512,12 +512,13 @@ const ResourceTracker = (() => {
                         <div class="training-name">${item.name}</div>
                         <div class="training-input-status">
                             <input type="text"
-                                inputmode="numeric"
-                                class="training-count-input" 
-                                data-category="${category}" 
-                                data-index="${index}"
-                                value="${required}"
-                                onfocus="this.value='';this.select()"> 
+                             inputmode="numeric"
+                             class="training-count-input" 
+                             data-category="${category}" 
+                             data-index="${index}"
+                             value="${required}"
+                             onfocus="this.oldValue = this.value; this.select()"
+                             onblur="if(this.value === '') this.value = this.oldValue">  <!-- 新代码（保留原值） -->
                             <div class="sub-status-indicator ${isMet ? 'met' : 'not-met'}">
                                 ${isMet ? '已满足' : `${completed}/${required}`}
                             </div>
@@ -773,7 +774,23 @@ const ResourceTracker = (() => {
                 updateAndSave();
                 return;
             }
-
+             // 历练输入框处理
+    document.addEventListener('focusin', (e) => {
+        if (e.target.classList.contains('training-count-input')) {
+            // 保存旧值并选中文本
+            e.target.oldValue = e.target.value;
+            e.target.select();
+        }
+    });
+    
+    document.addEventListener('focusout', (e) => {
+        if (e.target.classList.contains('training-count-input')) {
+            // 如果用户清空了内容，恢复旧值
+            if (e.target.value === '') {
+                e.target.value = e.target.oldValue;
+            }
+        }
+    });
             // 材料勾选监听
             if (e.target.matches('#materials-list input[type="checkbox"]')) {
                 const materialId = e.target.id.replace('-check', '');
