@@ -481,17 +481,19 @@ const ResourceTracker = (() => {
         container.innerHTML = `
     <div class="training-category-title">
         <span class="category-name">${categoryName}</span>
-        <div class="completion-badges">${completionBadges}</div>
-        <div class="training-controls">
-            <select class="tier-select" data-category="${category}">
-                ${[13, 15, 17].map(tier => `
-                    <option value="${tier}" 
-                        ${state.training[category][0].tier === tier ? 'selected' : ''}>
-                        修为${tier}
-                    </option>
-                `).join('')}
-            </select>
-            <button class="reset-category-btn" data-category="${category}">一键撤销</button>
+        <div class="title-controls-container">
+            <div class="completion-badges">${completionBadges}</div>
+            <div class="training-controls">
+                <select class="tier-select" data-category="${category}">
+                    ${[13, 15, 17].map(tier => `
+                        <option value="${tier}" 
+                            ${state.training[category][0].tier === tier ? 'selected' : ''}>
+                            修为${tier}
+                        </option>
+                    `).join('')}
+                </select>
+                <button class="reset-category-btn" data-category="${category}">一键撤销</button>
+            </div>
         </div>
     </div>
             ${GAME_DATA.training[category].map((item, index) => {
