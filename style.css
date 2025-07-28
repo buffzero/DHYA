@@ -724,23 +724,25 @@ input[type="checkbox"] {
     line-height: 1.15;  /* 默认1.25 → 1.15 */
   }
    .training-category-title {
-        gap: 6px; /* 新增：减小间距 */
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .title-controls-container {
+        width: 100%;
+        justify-content: space-between;
     }
     
     .completion-badges {
-        order: 1; /* 新增：调整显示顺序 */
-        width: 100%; /* 新增：占满宽度 */
-        margin-top: 4px; /* 新增：顶部间距 */
-        margin-right: 0; /* 修改：移除自动右边距 */
+        order: 1;
+        width: 100%;
+        margin-bottom: 6px;
     }
     
     .training-controls {
-        margin-left: auto; /* 新增：右对齐 */
-    }
-    
-    .tier-select, .reset-category-btn {
-        font-size: 11px; /* 新增：减小字号 */
-        padding: 2px 4px; /* 新增：减小内边距 */
+        order: 2;
+        width: 100%;
     }
   /* ===== 主要容器内边距调整 ===== */
   #resourceTracker,
@@ -1065,13 +1067,11 @@ button:disabled:hover {
 .completion-badges {
     display: flex;
     gap: 6px;
-    margin-right: auto; /* 新增：自动右边距 */
-    padding-left: 12px; /* 修改：调整原有内边距 */
 }
 /* 新增控制按钮容器样式 */
 .training-controls {
-    display: flex; /* 新增：弹性布局 */
-    gap: 8px; /* 新增：按钮间距 */
+    display: flex;
+    gap: 8px;
 }
 
 .completion-badge {
@@ -1111,10 +1111,16 @@ button:disabled:hover {
 /* 调整标题布局 */
 .training-category-title {
     display: flex;
-    align-items: center;
     flex-wrap: wrap;
-    gap: 8px;
+    align-items: center;
+    justify-content: space-between; /* 确保内容分布在两端 */
     padding: 8px 12px;
+}
+/* 新增控制容器样式 */
+.title-controls-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
 /* 新增通用样式 */
