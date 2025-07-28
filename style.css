@@ -896,6 +896,79 @@ input[type="checkbox"] {
     min-width: 14px;
   }
 }
+/* ==================== 修为材料 ==================== */
+.cultivation-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 16px;
+    background: var(--gray-50);
+    border-radius: var(--radius-sm);
+    margin-bottom: 16px;
+}
+
+.input-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.input-row label {
+    font-weight: 500;
+    color: var(--gray-800);
+}
+
+.input-row select {
+    padding: 8px 12px;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-sm);
+    background: var(--white);
+}
+
+.material-inputs {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    padding: 0 16px 16px;
+}
+
+.material-input {
+    display: flex;
+    flex-direction: column;
+}
+
+.material-input label {
+    font-weight: 500;
+    margin-bottom: 4px;
+    color: var(--gray-800);
+}
+
+.material-input input {
+    padding: 8px 12px;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-sm);
+}
+
+.actions {
+    padding: 0 16px 16px;
+    text-align: center;
+}
+
+#calculate-cultivation {
+    padding: 10px 20px;
+    background: var(--blue);
+    color: var(--black);
+    border: none;
+    border-radius: var(--radius-sm);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+#calculate-cultivation:hover {
+    background: #68b3ff;
+    box-shadow: var(--shadow-sm);
+}
 /* ==================== 按钮微交互 ==================== */
 button {
   transition: 
