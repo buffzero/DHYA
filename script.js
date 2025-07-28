@@ -16,7 +16,9 @@ const ResourceTracker = (() => {
             classStatus: '#classStatus',
             attributeStatus: '#attributeStatus',
             materialsList: '#materials-list',
-            
+            cultivationAttribute: '#cultivation-attribute',
+            cultivationTier: '#cultivation-tier',
+            calculateCultivation: '#calculate-cultivation',
             // 金钱和经验
             moneyCheck: '#money-check',
             fragments: '#bingshu_canjuan',
@@ -201,6 +203,7 @@ const ResourceTracker = (() => {
             loadData();
             renderAll();
             setupEventListeners();
+            setupCultivationListeners(); 
             console.log('✅ 初始化完成');
         } catch (error) {
             console.error('初始化过程中出错:', error);
@@ -881,7 +884,158 @@ const ResourceTracker = (() => {
             }
         });
     };
+// 新增函数：设置修为材料事件监听
+const setupCultivationListeners = () => {
+    // 属性切换显示对应材料
+    dom.cultivationAttribute.addEventListener('change', (e) => {
+        const attribute = e.target.value;
+        document.querySelectorAll('.material-inputs').forEach(el => {
+            el.style.display = 'none';
+        });
+        document.getElementById(`${attribute}-materials`).style.display = 'grid';
+    });
+    
+    // 计算并应用按钮
+    dom.calculateCultivation.addEventListener('click', calculateAndApply);
+};
 
+// 材料需求配置
+const MATERIAL_REQUIREMENTS = {
+    windFire: {
+        13: { juanShan: 180, cuiShan: 570, jinShan: 1440, yuShan: 1610, xianShan: 660, beiShan: 0 },
+        15: { juanShan: 180, cuiShan: 570, jinShan: 1440, yuShan: 2550, xianShan: 2070, beiShan: 0 },
+        17: { juanShan: 180, cuiShan: 570, jinShan: 1440, yuShan: 2550, xianShan: 3420, beiShan: 2100 }
+    },
+    yinYang: {
+        13: { tongJing: 180, liuJing: 570, liuJinJing: 1440, baoShiJing: 1610, shuiJing: 660, xingHanJing: 0 },
+        15: { tongJing: 180, liuJing: 570, liuJinJing: 1440, baoShiJing: 2550, shuiJing: 2070, xingHanJing: 0 },
+        17: { tongJing: 180, liuJing: 570, liuJinJing: 1440, baoShiJing: 2550, shuiJing: 3420, xingHanJing: 2100 }
+    },
+    earthWater: {
+        13: { zhuoJiu: 180, qingJiu: 570, baiJiu: 1440, lingQuan: 1610, baWangLei: 660, muLan: 0 },
+        15: { zhuoJiu: 180, qingJiu: 570, baiJiu: 1440, lingQuan: 2550, baWangLei: 2070, muLan: 0 },
+        17: { zhuoJiu: 180, qingJiu: 570, baiJiu: 1440, lingQuan: 2550, baWangLei: 3420, muLan: 2100 }
+    }
+};
+
+// 历练层数与材料关系
+const TRAINING_RELATIONS = {
+    4: ['juanShan', 'cuiShan', 'tongJing', 'liuJing', 'zhuoJiu', 'qingJiu'],
+    6: ['cuiShan', 'jinShan', 'liuJing', 'liuJinJing', 'qingJiu', 'baiJiu'],
+    8: ['jinShan', 'yuShan', 'liuJinJing', 'baoShiJing', 'baiJiu', 'lingQuan'],
+    10: ['yuShan', 'xianShan', 'baoShiJing', 'shuiJing', 'lingQuan', 'baWangLei'],
+    12: ['xianShan', 'beiShan', 'shuiJing', 'xingHanJing', 'baWangLei', 'muLan']
+};
+
+// 历练关卡材料掉落
+const TRAINING_DROPS = {
+    4: 30, // 每层掉落30个材料
+    6: 40,
+    8: 45,
+    10: 50,
+    12: 60
+};
+
+// 计算并应用历练次数
+const calculateAndApply = () => {
+    const attribute = dom.cultivationAttribute.value;
+    const tier = parseInt(dom.cultivationTier.value);
+    
+    // 获取用户输入的材料数量
+    const materialInputs = document.querySelectorAll(`#${attribute}-materials input`);
+    const userMaterials = {};
+    
+    materialInputs.forEach(input => {
+        const material = input.dataset.material;
+        userMaterials[material] = parseInt(input.value) || 0;
+    });
+    
+    // 计算缺少的材料
+    const requirements = MATERIAL_REQUIREMENTS[attribute][tier];
+    const missingMaterials = {};
+    
+    Object.keys(requirements).forEach(material => {
+        const required = requirements[material];
+        const has = userMaterials[material] || 0;
+        missingMaterials[material] = Math.max(0, required - has);
+    });
+    
+    // 计算各层历练次数
+    const trainingCounts = {4: 0, 6: 0, 8: 0, 10: 0, 12: 0};
+    
+    // 从高到低计算历练层数
+    [12, 10, 8, 6, 4].forEach(level => {
+        const materials = TRAINING_RELATIONS[level];
+        
+        // 计算该层能解决的材料缺口
+        let maxCount = 0;
+        materials.forEach(material => {
+            if (missingMaterials[material] > 0) {
+                const count = Math.ceil(missingMaterials[material] / TRAINING_DROPS[level]);
+                if (count > maxCount) maxCount = count;
+            }
+        });
+        
+        // 更新历练次数和剩余材料
+        if (maxCount > 0) {
+            trainingCounts[level] = maxCount;
+            
+            materials.forEach(material => {
+                if (missingMaterials[material] > 0) {
+                    missingMaterials[material] = Math.max(0, 
+                        missingMaterials[material] - maxCount * TRAINING_DROPS[level]);
+                }
+            });
+        }
+    });
+    
+    // 应用计算结果到历练模块
+    applyToTraining(attribute, trainingCounts);
+    
+    alert('计算结果已应用到历练模块！');
+};
+
+// 将计算结果应用到历练模块
+const applyToTraining = (attribute, trainingCounts) => {
+    // 属性到历练类别的映射
+    const attributeToTraining = {
+        windFire: 'windFire',
+        yinYang: 'yinYang',
+        earthWater: 'earthWater'
+    };
+    
+    const trainingCategory = attributeToTraining[attribute];
+    
+    // 历练层数到历练项的索引映射
+    const levelToIndex = {
+        4: 0,
+        6: 1,
+        8: 2,
+        10: 3,
+        12: 4
+    };
+    
+    // 更新历练次数
+    Object.entries(trainingCounts).forEach(([level, count]) => {
+        const index = levelToIndex[level];
+        if (index !== undefined) {
+            const input = document.querySelector(
+                `.training-count-input[data-category="${trainingCategory}"][data-index="${index}"]`
+            );
+            
+            if (input) {
+                input.value = count;
+                
+                // 更新状态
+                state.training[trainingCategory][index].required = count;
+                state.training[trainingCategory][index].userModified = true;
+            }
+        }
+    });
+    
+    // 保存并更新UI
+    updateAndSave();
+};
     // ==================== 工具函数 ====================
     /**
  * 兼容旧版数据迁移
