@@ -123,7 +123,116 @@
                 <!-- 动态生成材料列表 -->
             </div>
         </div>
-        
+        <!-- 在升级材料区块后添加修为材料区块 -->
+<div class="section">
+    <div class="section-title">修为材料</div>
+    <div class="cultivation-controls">
+        <div class="input-row">
+            <label>选择属性：</label>
+            <select id="cultivation-attribute">
+                <option value="windFire">风火</option>
+                <option value="yinYang">阴阳</option>
+                <option value="earthWater">地水</option>
+            </select>
+        </div>
+        <div class="input-row">
+            <label>选择修为：</label>
+            <select id="cultivation-tier">
+                <option value="13">13</option>
+                <option value="15">15</option>
+                <option value="17">17</option>
+            </select>
+        </div>
+    </div>
+    
+    <!-- 风火材料 -->
+    <div class="material-inputs" id="windFire-materials">
+        <div class="material-input">
+            <label>绢扇</label>
+            <input type="number" min="0" value="0" data-material="juanShan">
+        </div>
+        <div class="material-input">
+            <label>翠扇</label>
+            <input type="number" min="0" value="0" data-material="cuiShan">
+        </div>
+        <div class="material-input">
+            <label>金丝扇</label>
+            <input type="number" min="0" value="0" data-material="jinShan">
+        </div>
+        <div class="material-input">
+            <label>羽扇</label>
+            <input type="number" min="0" value="0" data-material="yuShan">
+        </div>
+        <div class="material-input">
+            <label>仙门扇</label>
+            <input type="number" min="0" value="0" data-material="xianShan">
+        </div>
+        <div class="material-input">
+            <label>悲回风扇</label>
+            <input type="number" min="0" value="0" data-material="beiShan">
+        </div>
+    </div>
+    
+    <!-- 阴阳材料 -->
+    <div class="material-inputs" id="yinYang-materials" style="display:none;">
+        <div class="material-input">
+            <label>铜镜</label>
+            <input type="number" min="0" value="0" data-material="tongJing">
+        </div>
+        <div class="material-input">
+            <label>六博镜</label>
+            <input type="number" min="0" value="0" data-material="liuJing">
+        </div>
+        <div class="material-input">
+            <label>鎏金镜</label>
+            <input type="number" min="0" value="0" data-material="liuJinJing">
+        </div>
+        <div class="material-input">
+            <label>宝石镜</label>
+            <input type="number" min="0" value="0" data-material="baoShiJing">
+        </div>
+        <div class="material-input">
+            <label>水镜</label>
+            <input type="number" min="0" value="0" data-material="shuiJing">
+        </div>
+        <div class="material-input">
+            <label>星汉镜</label>
+            <input type="number" min="0" value="0" data-material="xingHanJing">
+        </div>
+    </div>
+    
+    <!-- 地水材料 -->
+    <div class="material-inputs" id="earthWater-materials" style="display:none;">
+        <div class="material-input">
+            <label>浊酒</label>
+            <input type="number" min="0" value="0" data-material="zhuoJiu">
+        </div>
+        <div class="material-input">
+            <label>清酒</label>
+            <input type="number" min="0" value="0" data-material="qingJiu">
+        </div>
+        <div class="material-input">
+            <label>百末旨酒</label>
+            <input type="number" min="0" value="0" data-material="baiJiu">
+        </div>
+        <div class="material-input">
+            <label>灵山泉</label>
+            <input type="number" min="0" value="0" data-material="lingQuan">
+        </div>
+        <div class="material-input">
+            <label>霸王泪</label>
+            <input type="number" min="0" value="0" data-material="baWangLei">
+        </div>
+        <div class="material-input">
+            <label>木兰坠露</label>
+            <input type="number" min="0" value="0" data-material="muLan">
+        </div>
+    </div>
+    
+    <div class="actions">
+        <button id="calculate-cultivation">计算并应用</button>
+    </div>
+</div>
         <!-- 历练材料部分 -->
         <div class="section">
             <div class="section-title">历练材料</div>
