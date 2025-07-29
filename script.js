@@ -76,25 +76,25 @@ const ResourceTracker = (() => {
         // 历练配置
         training: {
             windFire: [
-                { name: '【历练·四】', required: 6, editable: true },
-                { name: '【历练·六】', required: 12, editable: true },
-                { name: '【历练·八】', required: 24, editable: true },
-                { name: '【历练·十】', required: 35, editable: true },
-                { name: '【历练·十二】', required: 47, editable: true }
+                { name: '【历练·四】', required: 6, editable: true, tier: 17 },
+                { name: '【历练·六】', required: 12, editable: true, tier: 17 },
+                { name: '【历练·八】', required: 24, editable: true, tier: 17 },
+                { name: '【历练·十】', required: 35, editable: true, tier: 17 },
+                { name: '【历练·十二】', required: 47, editable: true, tier: 17 }
             ],
             earthWater: [
-                { name: '【历练·四】', required: 6, editable: true },
-                { name: '【历练·六】', required: 12, editable: true },
-                { name: '【历练·八】', required: 24, editable: true },
-                { name: '【历练·十】', required: 35, editable: true },
-                { name: '【历练·十二】', required: 47, editable: true }
+                { name: '【历练·四】', required: 6, editable: true, tier: 17 },
+                { name: '【历练·六】', required: 12, editable: true, tier: 17 },
+                { name: '【历练·八】', required: 24, editable: true, tier: 17 },
+                { name: '【历练·十】', required: 35, editable: true, tier: 17 },
+                { name: '【历练·十二】', required: 47, editable: true, tier: 17 }
             ],
             yinYang: [
-                { name: '【历练·四】', required: 6, editable: true },
-                { name: '【历练·六】', required: 12, editable: true },
-                { name: '【历练·八】', required: 24, editable: true },
-                { name: '【历练·十】', required: 35, editable: true },
-                { name: '【历练·十二】', required: 47, editable: true }
+                { name: '【历练·四】', required: 6, editable: true, tier: 17 },
+                { name: '【历练·六】', required: 12, editable: true, tier: 17 },
+                { name: '【历练·八】', required: 24, editable: true, tier: 17 },
+                { name: '【历练·十】', required: 35, editable: true, tier: 17 },
+                { name: '【历练·十二】', required: 47, editable: true, tier: 17 }
             ]
         },
         trainingPresets: {
@@ -145,24 +145,24 @@ const ResourceTracker = (() => {
             earthWater: {13: 0, 15: 0, 17: 0}
         },
         // 历练进度
-        training: {
+       training: {
             yinYang: GAME_DATA.training.yinYang.map(item => ({
                 completed: 0,
                 required: item.required,
                 userModified: false,
-                tier: 17 // 默认17修为
+                tier: item.tier  // 使用GAME_DATA中的默认值
             })),
             windFire: GAME_DATA.training.windFire.map(item => ({
                 completed: 0,
                 required: item.required,
                 userModified: false,
-                tier: 17 // 默认17修为
+                tier: item.tier  // 使用GAME_DATA中的默认值
             })),
             earthWater: GAME_DATA.training.earthWater.map(item => ({
                 completed: 0,
                 required: item.required,
                 userModified: false,
-                tier: 17 // 默认17修为
+                tier: item.tier  // 使用GAME_DATA中的默认值
             }))
         },
         targetSelection: {
@@ -213,48 +213,59 @@ const ResourceTracker = (() => {
 
     // ==================== loadData 函数 ====================
     const loadData = () => {
-    try {
-        const saved = localStorage.getItem(CONFIG.storageKey);
-        if (!saved) return;
+        try {
+            const saved = localStorage.getItem(CONFIG.storageKey);
+            if (!saved) return;
 
-        const parsed = JSON.parse(saved);
-        
-        // 新增数据迁移处理
-        state.trainingCompletions = migrateOldData(parsed);
-        
-        // 以下是原有代码保持不变
-        const materials = {};
-        GAME_DATA.materials.forEach(material => {
-            materials[material.id] = parsed.materials?.[material.id] || false;
-        });
+            const parsed = JSON.parse(saved);
+            
+            // 新增数据迁移处理
+            state.trainingCompletions = migrateOldData(parsed);
+            
+            // 修复：确保历练数据正确加载
+            const materials = {};
+            GAME_DATA.materials.forEach(material => {
+                materials[material.id] = parsed.materials?.[material.id] || false;
+            });
 
-        state = {
-            ...resetState(),
-            ...parsed,
-            materials,
-            targetSelection: parsed.targetSelection || resetState().targetSelection,
-            trainingHistory: parsed.trainingHistory || [],
-            training: {
-                yinYang: mergeTrainingData(parsed.training?.yinYang, 'yinYang'),
-                windFire: mergeTrainingData(parsed.training?.windFire, 'windFire'),
-                earthWater: mergeTrainingData(parsed.training?.earthWater, 'earthWater')
-            }
-        };
-        
-        updateLastUpdated();
-    } catch (e) {
-        console.error('数据加载失败:', e);
-        state = resetState();
-    }
-};
+            // 修复：确保历练数据正确合并
+            state = {
+                ...resetState(),
+                ...parsed,
+                materials,
+                targetSelection: parsed.targetSelection || resetState().targetSelection,
+                trainingHistory: parsed.trainingHistory || [],
+                training: {
+                    yinYang: mergeTrainingData(parsed.training?.yinYang, 'yinYang'),
+                    windFire: mergeTrainingData(parsed.training?.windFire, 'windFire'),
+                    earthWater: mergeTrainingData(parsed.training?.earthWater, 'earthWater')
+                }
+            };
+            
+            updateLastUpdated();
+        } catch (e) {
+            console.error('数据加载失败:', e);
+            state = resetState();
+        }
+    };
 
     // 辅助函数：合并历练数据
     const mergeTrainingData = (savedData, category) => {
-        return (savedData || []).map((item, i) => ({
+        // 如果没有保存的数据，使用默认配置
+        if (!savedData) {
+            return GAME_DATA.training[category].map(item => ({
+                completed: 0,
+                required: item.required,
+                userModified: false,
+                tier: item.tier
+            }));
+        }
+        
+        return savedData.map((item, i) => ({
             completed: item.completed || 0,
             required: item.required >= 0 ? item.required : GAME_DATA.training[category][i].required,
             userModified: item.userModified || false,
-            tier: item.tier || 17
+            tier: item.tier || 17  // 确保tier有默认值
         }));
     };
 
@@ -459,48 +470,48 @@ const ResourceTracker = (() => {
 
     // 渲染单个历练类别
    const renderTrainingCategory = (category, container) => {
-    const floors = [4, 6, 8, 10, 12];
-    const categoryName = getCategoryName(category);
-    
-    // 生成修为徽章（显示已完成+可完成次数）
-    const completionBadges = [13, 15, 17].map(tier => {
-        const completed = state.trainingCompletions[category][tier] || 0;
-        const available = checkTrainingCompletion(category, tier) - completed;
+        const floors = [4, 6, 8, 10, 12];
+        const categoryName = getCategoryName(category);
         
-        if (completed > 0 || available > 0) {
-            return `
-                <span class="completion-badge tier-${tier} 
-                      ${available > 0 ? 'available' : ''}"
-                      title="${categoryName}·修为${tier}：
-                      已完成 ${completed}次
-                      ${available > 0 ? `可领取 +${available}次` : ''}">
-                    ${tier}: ${completed}${available > 0 ? `(+${available})` : ''}
-                </span>
-            `;
-        }
-        return '';
-    }).filter(Boolean).join('');
+        // 生成修为徽章（显示已完成+可完成次数）
+        const completionBadges = [13, 15, 17].map(tier => {
+            const completed = state.trainingCompletions[category][tier] || 0;
+            const available = checkTrainingCompletion(category, tier) - completed;
+            
+            if (completed > 0 || available > 0) {
+                return `
+                    <span class="completion-badge tier-${tier} 
+                          ${available > 0 ? 'available' : ''}"
+                          title="${categoryName}·修为${tier}：
+                          已完成 ${completed}次
+                          ${available > 0 ? `可领取 +${available}次` : ''}">
+                        ${tier}: ${completed}${available > 0 ? `(+${available})` : ''}
+                    </span>
+                `;
+            }
+            return '';
+        }).filter(Boolean).join('');
 
         container.innerHTML = `
-    <div class="training-category-title">
-      <div class="category-name">${categoryName}</div>
-      <div class="title-controls-container">
-        <div class="completion-badges">${completionBadges}</div>
-        <div class="training-controls">
-          <select class="tier-select" data-category="${category}">
-            ${[13, 15, 17].map(tier => `
-              <option value="${tier}" 
-                ${state.training[category][0].tier === tier ? 'selected' : ''}>
-                修为${tier}
-              </option>
-            `).join('')}
-          </select>
-          <button class="reset-category-btn" data-category="${category}">一键撤销</button>
-        </div>
-      </div>
-    </div>
-            ${GAME_DATA.training[category].map((item, index) => {
-                const trainingItem = state.training[category][index] || { completed: 0 };
+            <div class="training-category-title">
+                <div class="category-name">${categoryName}</div>
+                <div class="title-controls-container">
+                    <div class="completion-badges">${completionBadges}</div>
+                    <div class="training-controls">
+                        <select class="tier-select" data-category="${category}">
+                            ${[13, 15, 17].map(tier => `
+                                <option value="${tier}" 
+                                    ${state.training[category][0].tier === tier ? 'selected' : ''}>
+                                    修为${tier}
+                                </option>
+                            `).join('')}
+                        </select>
+                        <button class="reset-category-btn" data-category="${category}">一键撤销</button>
+                    </div>
+                </div>
+            </div>
+            ${state.training[category].map((trainingItem, index) => {
+                const gameItem = GAME_DATA.training[category][index];
                 const floor = floors[index];
                 
                 const required = trainingItem.userModified ?
@@ -512,24 +523,24 @@ const ResourceTracker = (() => {
                 const remaining = required - completed;
                 
                 return `
-    <div class="training-item">
-        <div class="training-header">
-            <div class="training-name">${item.name}</div>
-            <div class="training-input-status">
-                <input type="text"
-                    inputmode="numeric"
-                    class="training-count-input" 
-                    data-category="${category}" 
-                    data-index="${index}"
-                    value="${required}"
-                    onfocus="this.value=''; setTimeout(() => this.select(), 10)">
-                <div class="sub-status-indicator ${isMet ? 'met' : 'not-met'}">
-                    ${isMet ? '已满足' : `${completed}/${required}`}
-                </div>
-            </div>
-        </div>
-        ${required > 0 ? renderCircles(required, completed) : ''}
-                    <div class="training-actions">
+                    <div class="training-item">
+                        <div class="training-header">
+                            <div class="training-name">${gameItem.name}</div>
+                            <div class="training-input-status">
+                                <input type="text"
+                                    inputmode="numeric"
+                                    class="training-count-input" 
+                                    data-category="${category}" 
+                                    data-index="${index}"
+                                    value="${required}"
+                                    onfocus="this.value=''; setTimeout(() => this.select(), 10)">
+                                <div class="sub-status-indicator ${isMet ? 'met' : 'not-met'}">
+                                    ${isMet ? '已满足' : `${completed}/${required}`}
+                                </div>
+                            </div>
+                        </div>
+                        ${required > 0 ? renderCircles(required, completed) : ''}
+                        <div class="training-actions">
                             <button class="consume-btn" 
                                 data-category="${category}" 
                                 data-index="${index}" 
@@ -627,56 +638,56 @@ const ResourceTracker = (() => {
 
     // 处理核销操作
     const handleConsume = (category, index, count) => {
-    const trainingItem = state.training[category][index] || { completed: 0 };
-    const required = trainingItem.userModified 
-        ? trainingItem.required 
-        : GAME_DATA.trainingPresets[trainingItem.tier][[4,6,8,10,12][index]];
+        const trainingItem = state.training[category][index];
+        const floor = [4, 6, 8, 10, 12][index];
+        
+        // 修复：使用正确的required值
+        const required = trainingItem.userModified ?
+            trainingItem.required :
+            GAME_DATA.trainingPresets[trainingItem.tier][floor];
     
     // 计算剩余次数
-    const remaining = Math.max(0, required - (trainingItem.completed || 0));
-    
-    if (isNaN(count) || count <= 0) {
-        alert('核销次数必须大于0');
-        return;
-    }
-    
-    if (count > remaining) {
-        alert(`核销次数不能超过剩余次数（${remaining}）`);
-        return;
-    }
-    
-    const actualCount = Math.min(count, remaining);
-    if (actualCount <= 0) return;
-    
-    // 更新状态前先保存旧的完成状态
-    const oldCompletions = {};
-    [13, 15, 17].forEach(tier => {
-        oldCompletions[tier] = checkTrainingCompletion(category, tier);
-    });
-
-    // 记录操作历史
-    state.trainingHistory.push({
-        category,
-        index,
-        previousCount: trainingItem.completed,
-        count: actualCount,
-        timestamp: new Date().toISOString()
-    });
-    // 更新状态
-    trainingItem.completed += actualCount;
-
-    // 检查是否有新的修为完成
-     [13, 15, 17].forEach(tier => {
-        const totalAvailable = checkTrainingCompletion(category, tier);
-        const alreadyCompleted = state.trainingCompletions[category][tier] || 0;
+    // 计算剩余次数
+        const completed = trainingItem.completed || 0;
+        const remaining = Math.max(0, required - completed);
         
-        if (totalAvailable > alreadyCompleted) {
-            state.trainingCompletions[category][tier] = totalAvailable;
+        if (isNaN(count) || count <= 0) {
+            alert('核销次数必须大于0');
+            return;
         }
-    });
+        
+        if (count > remaining) {
+            alert(`核销次数不能超过剩余次数（${remaining}）`);
+            return;
+        }
+        
+        const actualCount = Math.min(count, remaining);
+        if (actualCount <= 0) return;
+        
+        // 记录操作历史
+        state.trainingHistory.push({
+            category,
+            index,
+            previousCount: completed,
+            count: actualCount,
+            timestamp: new Date().toISOString()
+        });
+        
+        // 更新状态
+        trainingItem.completed += actualCount;
 
-    updateAndSave();
-};
+        // 修复：确保更新修为完成记录
+        [13, 15, 17].forEach(tier => {
+            const totalAvailable = checkTrainingCompletion(category, tier);
+            const alreadyCompleted = state.trainingCompletions[category][tier] || 0;
+            
+            if (totalAvailable > alreadyCompleted) {
+                state.trainingCompletions[category][tier] = totalAvailable;
+            }
+        });
+
+        updateAndSave();
+    };
     
     // 处理撤销操作
     const handleUndo = (category, index) => {
