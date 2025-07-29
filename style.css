@@ -911,3 +911,18 @@ input[type="checkbox"] {
     font-size: 1rem;
   }
 }
+/* ==================== 隐藏修为完成次数显示 ==================== */
+.completion-badges {
+  display: none !important; /* 完全隐藏修为完成次数徽章 */
+}
+
+/* 同时移除标题区域的额外间距 */
+.training-category-title .title-controls-container {
+  display: none;
+}
+
+/* 调整分类标题布局 */
+.training-category-title {
+  justify-content: center !important; /* 标题居中 */
+  padding: 8px 12px !important;
+}
