@@ -723,27 +723,77 @@ input[type="checkbox"] {
   body {
     line-height: 1.15;  /* 默认1.25 → 1.15 */
   }
-   .training-category-title {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
-    }
-    
-    .title-controls-container {
-        width: 100%;
-        justify-content: space-between;
-    }
-    
-    .completion-badges {
-        order: 1;
-        width: 100%;
-        margin-bottom: 6px;
-    }
-    
-    .training-controls {
-        order: 2;
-        width: 100%;
-    }
+  
+  /* ===== 历练标题区域优化 ===== */
+  .training-category-title {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px;
+  }
+  
+  .title-controls-container {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .completion-badges {
+    order: 1;
+    width: 100%;
+    margin-bottom: 4px;
+    flex-wrap: wrap;
+    display: flex;
+    gap: 6px;
+  }
+  
+  .training-controls {
+    order: 2;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .tier-select,
+  .reset-category-btn {
+    width: 100%;
+    margin-left: 0;
+    margin-top: 0;
+  }
+  
+  /* ===== 历练操作按钮优化 ===== */
+  .training-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+  
+  .training-actions button {
+    font-size: 12px;
+    padding: 6px 4px;
+  }
+  
+  .custom-consume-input {
+    width: 100%;
+  }
+  
+  /* ===== 历练项紧凑设计 ===== */
+  .training-item {
+    padding: 12px 8px;
+  }
+  
+  .training-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .training-input-status {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  
   /* ===== 主要容器内边距调整 ===== */
   #resourceTracker,
   .target-section,
@@ -754,6 +804,7 @@ input[type="checkbox"] {
     padding-left: 3%;
     padding-right: 3%;
   }
+  
   /* ===== 列表项紧凑模式 ===== */
   .status-item,
   .training-item,
@@ -762,6 +813,7 @@ input[type="checkbox"] {
     padding-bottom: 6px;
     margin-bottom: 6px;   /* 原8-12px → 6px */
   }
+  
   /* ===== 按钮/输入框高度压缩 ===== */
   .training-actions button,
   .training-count-input,
@@ -770,6 +822,7 @@ input[type="checkbox"] {
     padding-top: 0;
     padding-bottom: 0;
   }
+  
   /* ===== 标题间距调整 ===== */
   .section-title,
   .training-category-title,
@@ -789,6 +842,7 @@ input[type="checkbox"] {
     font-size: 14px;  /* 原15-16px → 13px */
     padding: 8px 10px; /* 同步缩小内边距 */
   }
+  
   /* 属性名称（阴/阳等） */
   .status-item.yin,
   .status-item.yang,
@@ -798,20 +852,12 @@ input[type="checkbox"] {
   .status-item.shui {
     font-size: 13px;  /* 特殊属性更小字号 */
   }
+  
   /* 状态文字（可满级/待沉淀） */
   .status-column .status-indicator {
     font-size: 10px;  /* 保持与之前修改一致 */
   }
   
-  .training-actions {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  
-  .training-actions button {
-    width: 100%;
-  }
-
   .training-count-input {
     width: 50px;
     border-radius: 6px;
@@ -834,7 +880,6 @@ input[type="checkbox"] {
     font-size: 10px;
     padding: 1px 6px;
   }
-
   
   /* 历练区域的[已满足/未满足]状态框 */
   .sub-status-indicator {
@@ -847,6 +892,7 @@ input[type="checkbox"] {
     width: 12px;
     height: 12px;
  }
+  
   .circles-container {
     gap: 4px;
  }
@@ -856,58 +902,12 @@ input[type="checkbox"] {
     font-size: 0.95em; /* 可选：微调字体大小 */
   }
   
-  /* 移动端 - 历练标题区域 */
-  .training-category-title {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 6px;
-      padding: 10px;
-  }
-  
-  .completion-badges {
-      margin-right: 0;
-      padding-left: 0;
-      width: 100%;
-      order: 1;
-      margin-bottom: 4px;
-  }
-  
-  .tier-select {
-      order: 2;
-      margin-left: 0;
-      width: 100%;
-  }
-  
-  .reset-category-btn {
-      order: 3;
-      margin-left: 0;
-      width: 100%;
-      margin-top: 4px;
-  }
-  
   /* 徽章缩小并换行显示 */
   .completion-badge {
       font-size: 11px;
       padding: 1px 4px;
   }
-  
-  /* 移动端 - 控制按钮组 */
-  .training-controls {
-      flex-direction: column;
-      gap: 6px;
-  }
-  
-  .tier-select, .reset-category-btn {
-      flex: 1;
-  }
-  
-  .category-name {
-      width: 100%;
-      margin-bottom: 6px;
-      font-size: 1.05em;
-  }
 }
-
 
 /* 超小屏幕优化（宽度≤340px） */
 @media (max-width: 340px) {
@@ -915,6 +915,14 @@ input[type="checkbox"] {
     width: 14px;
     height: 14px;
     min-width: 14px;
+  }
+  
+  .training-actions {
+    grid-template-columns: 1fr;
+  }
+  
+  .training-actions button {
+    width: 100% !important;
   }
 }
 /* ==================== 修为材料 ==================== */
@@ -1151,19 +1159,4 @@ button:disabled:hover {
     content: "次";
     font-size: 0.8em;
     opacity: 0.7;
-}
-/* ==================== 历练模块 ==================== */
-/* 以下是新增的标题区域布局样式 */
-.training-category-title {
-    display: flex; /* 新增：弹性布局 */
-    align-items: center; /* 新增：垂直居中 */
-    flex-wrap: wrap; /* 新增：允许换行 */
-    gap: 8px; /* 新增：元素间距 */
-    padding: 8px 12px; /* 修改：调整原有内边距 */
-}
-
-/* 新增分类名称样式 */
-.category-name {
-    font-weight: 600; /* 新增：加粗 */
-    margin-right: 8px; /* 新增：右边距 */
 }
