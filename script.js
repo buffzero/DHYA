@@ -275,16 +275,14 @@ const ResourceTracker = (() => {
     let minCompletion = Infinity;
     
     floors.forEach((floor, index) => {
-        // 修复：使用当前选择的修为等级对应的要求次数
         const required = GAME_DATA.trainingPresets[tier][floor];
         const completed = state.training[category][index].completed;
         
-        // 计算完成比例并取整
-        const completionRatio = Math.floor(completed / required);
-        minCompletion = Math.min(minCompletion, completionRatio);
+        // 计算完成轮数（整数部分）
+        const rounds = Math.floor(completed / required);
+        minCompletion = Math.min(minCompletion, rounds);
     });
     
-    // 返回最小完成比例
     return minCompletion === Infinity ? 0 : minCompletion;
 };
     // ==================== setupDOM 函数 ====================
@@ -1051,8 +1049,6 @@ const calculateAndApply = () => {
     const category = attribute === 'yinYang' ? 'yinYang' : 
                     attribute === 'windFire' ? 'windFire' : 'earthWater';
     
-    console.log(`属性: ${attribute}, 修为: ${tier}, 对应历练类别: ${category}`);
-    
     // 获取用户输入的材料数量
     const userMaterials = {};
     const materialContainer = document.getElementById(`${attribute}-materials`);
@@ -1065,51 +1061,38 @@ const calculateAndApply = () => {
     const materialInputs = materialContainer.querySelectorAll('input');
     materialInputs.forEach(input => {
         userMaterials[input.dataset.material] = parseInt(input.value) || 0;
-        console.log(`${input.dataset.material}: ${userMaterials[input.dataset.material]}`);
     });
 
     // 获取当前修为需求
     const requirements = JSON.parse(JSON.stringify(MATERIAL_REQUIREMENTS[attribute][tier]));
-    console.log('材料需求:', requirements);
     
     // 计算各历练次数
     const trainingCounts = {4:0, 6:0, 8:0, 10:0, 12:0};
     
-    // 从高阶到低阶计算
-    const processTrainingLevel = (level, primaryMat, secondaryMat) => {
-        const needed = Math.max(0, requirements[primaryMat] - userMaterials[primaryMat]);
-        if (needed <= 0) return 0;
+    // 修复计算逻辑 - 使用实际缺口计算
+    const processTrainingLevel = (level, primaryMat) => {
+        // 计算实际缺口 = 需求 - 已有材料
+        const gap = requirements[primaryMat] - userMaterials[primaryMat];
+        if (gap <= 0) return 0;
         
-        const count = Math.ceil(needed / TRAINING_DROPS[level]);
+        // 计算需要刷的次数 = 缺口 / 每次掉落数量
+        const count = Math.ceil(gap / TRAINING_DROPS[level]);
         trainingCounts[level] = count;
-        
-        // 扣除关联材料需求
-        if (secondaryMat && requirements[secondaryMat]) {
-            requirements[secondaryMat] = Math.max(0, requirements[secondaryMat] - count * TRAINING_DROPS[level]);
-        }
-        
         return count;
     };
 
-    // 从最高级开始计算
-    if (tier === 17 && requirements.xingHanJing > 0) {
-        processTrainingLevel(12, 'xingHanJing', 'xianShan');
+    // 重新组织计算顺序
+    if (tier === 17) {
+        if (requirements.xingHanJing > 0) processTrainingLevel(12, 'xingHanJing');
+        if (requirements.shuiJing > 0) processTrainingLevel(10, 'shuiJing');
+    } else if (tier === 15) {
+        if (requirements.shuiJing > 0) processTrainingLevel(10, 'shuiJing');
     }
-    if (requirements.shuiJing > 0) {
-        processTrainingLevel(10, 'shuiJing', 'baoShiJing');
-    }
-    if (requirements.liuJinJing > 0) {
-        processTrainingLevel(8, 'liuJinJing', 'jinShan');
-    }
-    if (requirements.liuJing > 0) {
-        processTrainingLevel(6, 'liuJing', 'cuiShan');
-    }
-    if (requirements.tongJing > 0) {
-        processTrainingLevel(4, 'tongJing', null);
-    }
-
-    console.log('计算结果:', trainingCounts);
     
+    if (requirements.liuJinJing > 0) processTrainingLevel(8, 'liuJinJing');
+    if (requirements.liuJing > 0) processTrainingLevel(6, 'liuJing');
+    if (requirements.tongJing > 0) processTrainingLevel(4, 'tongJing');
+
     // 应用计算结果
     applyToTraining(category, trainingCounts);
     
@@ -1156,57 +1139,58 @@ const migrateOldData = (savedData) => {
 
     // 重置初始化状态
     const resetState = () => {
-        // 初始化材料状态
-        const materials = {};
-        GAME_DATA.materials.forEach(material => {
-            materials[material.id] = false;
-        });
-        
-        // 初始化历练状态
-        const initTraining = (category) => 
-            GAME_DATA.training[category].map(item => ({
-                completed: 0,
-                required: item.required,
-                userModified: false,
-                tier: 17
-            }));
+    // 初始化材料状态
+    const materials = {};
+    GAME_DATA.materials.forEach(material => {
+        materials[material.id] = false;
+    });
+    
+    // 初始化历练状态 - 确保所有字段正确初始化
+    const initTraining = (category) => 
+        GAME_DATA.training[category].map(item => ({
+            completed: 0,
+            required: item.required,
+            userModified: false,
+            tier: item.tier
+        }));
 
-        return {
-            moneyChecked: false,
-            fragments: 0,
-            scrolls: 0,
-            materials,
-            trainingCompletions: {
-                yinYang: {13: 0, 15: 0, 17: 0},
-                windFire: {13: 0, 15: 0, 17: 0},
-                earthWater: {13: 0, 15: 0, 17: 0}
+    return {
+        moneyChecked: false,
+        fragments: 0,
+        scrolls: 0,
+        materials,
+        trainingCompletions: {
+            yinYang: {13: 0, 15: 0, 17: 0},
+            windFire: {13: 0, 15: 0, 17: 0},
+            earthWater: {13: 0, 15: 0, 17: 0}
+        },
+        training: {
+            yinYang: initTraining('yinYang'),
+            windFire: initTraining('windFire'),
+            earthWater: initTraining('earthWater')
+        },
+        targetSelection: {
+            classes: {
+                guidao: false,
+                shenji: false,
+                qihuang: false,
+                longdun: false,
+                pojun: false
             },
-            training: {
-                yinYang: initTraining('yinYang'),
-                windFire: initTraining('windFire'),
-                earthWater: initTraining('earthWater')
-            },
-            targetSelection: {
-                classes: {
-                    guidao: false,
-                    shenji: false,
-                    qihuang: false,
-                    longdun: false,
-                    pojun: false
-                },
-                attributes: {
-                    yin: false,
-                    yang: false,
-                    feng: false,
-                    huo: false,
-                    di: false,
-                    shui: false
-                }
-            },
-            trainingHistory: [],
-            lastUpdated: new Date().toISOString()
-        };
+            attributes: {
+                yin: false,
+                yang: false,
+                feng: false,
+                huo: false,
+                di: false,
+                shui: false
+            }
+        },
+        trainingHistory: [],
+        lastUpdated: new Date().toISOString()
     };
+};
+
 
     // 初始化职业状态
     const getClassKey = (className) => {
