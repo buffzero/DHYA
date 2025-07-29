@@ -491,6 +491,11 @@ input[type="checkbox"] {
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 /* 单个历练项 */
 .training-item {
@@ -586,7 +591,8 @@ input[type="checkbox"] {
 /* 历练操作按钮容器 */
 .training-actions {
   all: unset;             /* 重置所有继承样式 */
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr); /* 两列布局 */
   gap: 8px;               /* 按钮间距 */
   width: 100%;            /* 占满容器宽度 */
 }
@@ -612,7 +618,6 @@ input[type="checkbox"] {
   font-weight: 500;
   text-align: center;
   transition: all 0.2s;   /* 悬停动画 */
-  flex: 1 1 auto;         /* 自动伸缩 */
   cursor: pointer;        /* 手型指针 */
 }
 
@@ -726,72 +731,50 @@ input[type="checkbox"] {
   
   /* ===== 历练标题区域优化 ===== */
   .training-category-title {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
+    flex-direction: row; /* 保持水平布局 */
+    align-items: center;
+    gap: 10px;
     padding: 10px;
   }
   
-  .title-controls-container {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-  
   .completion-badges {
-    order: 1;
-    width: 100%;
-    margin-bottom: 4px;
-    flex-wrap: wrap;
+    margin-right: auto; /* 徽章靠左 */
     display: flex;
     gap: 6px;
   }
   
   .training-controls {
-    order: 2;
-    width: 100%;
     display: flex;
-    flex-direction: column;
     gap: 8px;
-  }
-  
-  .tier-select,
-  .reset-category-btn {
-    width: 100%;
-    margin-left: 0;
-    margin-top: 0;
   }
   
   /* ===== 历练操作按钮优化 ===== */
   .training-actions {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 6px;
+    grid-template-columns: repeat(2, 1fr); /* 两列布局 */
+    gap: 8px; /* 按钮间距 */
   }
   
+  /* 确保每个按钮占据整列 */
   .training-actions button {
-    font-size: 12px;
-    padding: 6px 4px;
-  }
-  
-  .custom-consume-input {
     width: 100%;
   }
   
-  /* ===== 历练项紧凑设计 ===== */
-  .training-item {
-    padding: 12px 8px;
-  }
-  
-  .training-header {
-    flex-direction: column;
-    align-items: flex-start;
+  /* 自定义输入框和按钮单独处理 */
+  .training-actions .custom-consume {
+    grid-column: 1 / -1; /* 跨两列 */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     gap: 8px;
   }
   
-  .training-input-status {
-    width: 100%;
-    justify-content: flex-start;
+  .training-actions .custom-consume-input {
+    flex: 1;
+    max-width: 80px;
+  }
+  
+  .training-actions .undo-btn {
+    grid-column: 1 / -1; /* 跨两列 */
   }
   
   /* ===== 主要容器内边距调整 ===== */
@@ -917,12 +900,13 @@ input[type="checkbox"] {
     min-width: 14px;
   }
   
-  .training-actions {
-    grid-template-columns: 1fr;
+  .training-category-title {
+    flex-direction: column;
+    align-items: flex-start;
   }
   
-  .training-actions button {
-    width: 100% !important;
+  .training-controls {
+    width: 100%;
   }
 }
 /* ==================== 修为材料 ==================== */
