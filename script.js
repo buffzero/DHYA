@@ -280,14 +280,13 @@ const ResourceTracker = (() => {
         const completed = state.training[category][index].completed;
         
         // 计算完成比例并取整
-        const completionRatio = completed / required;
+        const completionRatio = Math.floor(completed / required);
         minCompletion = Math.min(minCompletion, completionRatio);
     });
     
-    // 返回最小完成比例的整数部分
-    return minCompletion === Infinity ? 0 : Math.floor(minCompletion);
+    // 返回最小完成比例
+    return minCompletion === Infinity ? 0 : minCompletion;
 };
-
     // ==================== setupDOM 函数 ====================
     const setupDOM = () => {
         try {
