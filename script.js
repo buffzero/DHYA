@@ -954,78 +954,64 @@ const TRAINING_DROPS = {
     12: 60
 };
 
+ const applyToTraining = (category, counts) => {
+    const floors = [4, 6, 8, 10, 12];
+    
+    floors.forEach((floor, index) => {
+        const count = counts[floor] || 0;
+        if (count > 0) {
+            handleConsume(category, index, count);
+        }
+    });
+    
+    // 更新显示
+    renderTraining();
+    saveData();
+};
 // 计算并应用历练次数
-// 完全修正后的计算函数
 const calculateAndApply = () => {
-  const attribute = dom.cultivationAttribute.value;
-  const tier = parseInt(dom.cultivationTier.value);
-  
-  // 1. 获取用户材料输入
-  const userMaterials = {};
-  document.querySelectorAll(`#${attribute}-materials input`).forEach(input => {
-    userMaterials[input.dataset.material] = parseInt(input.value) || 0;
-  });
-
-  // 2. 获取当前修为需求
-  const requirements = JSON.parse(JSON.stringify(MATERIAL_REQUIREMENTS[attribute][tier]));
-  
-  // 3. 计算精确的历练次数 (修正核心算法)
-  const trainingCounts = {4:0, 6:0, 8:0, 10:0, 12:0};
-  
-  // 特殊处理星汉镜（最高级材料优先计算）
-  if (requirements.xingHanJing > 0 && userMaterials.xingHanJing < requirements.xingHanJing) {
-    const needed = requirements.xingHanJing - userMaterials.xingHanJing;
-    trainingCounts[12] = Math.ceil(needed / TRAINING_DROPS[12]);
+    const attribute = dom.cultivationAttribute.value;
+    const tier = parseInt(dom.cultivationTier.value);
     
-    // 扣除其他关联材料需求
-    ['xianShan', 'shuiJing', 'baWangLei'].forEach(material => {
-      if (requirements[material]) {
-        requirements[material] -= trainingCounts[12] * TRAINING_DROPS[12];
-      }
+    // 获取用户输入的材料数量
+    const userMaterials = {};
+    document.querySelectorAll(`#${attribute}-materials input`).forEach(input => {
+        userMaterials[input.dataset.material] = parseInt(input.value) || 0;
     });
-  }
 
-  // 处理水镜需求（次优先级）
-  if (requirements.shuiJing > 0 && userMaterials.shuiJing < requirements.shuiJing) {
-    const needed = requirements.shuiJing - userMaterials.shuiJing;
-    trainingCounts[10] = Math.ceil(needed / TRAINING_DROPS[10]);
+    // 获取当前修为需求
+    const requirements = JSON.parse(JSON.stringify(MATERIAL_REQUIREMENTS[attribute][tier]));
     
-    // 扣除关联材料
-    ['yuShan', 'baoShiJing', 'lingQuan'].forEach(material => {
-      if (requirements[material]) {
-        requirements[material] -= trainingCounts[10] * TRAINING_DROPS[10];
-      }
-    });
-  }
-
-  // 处理鎏金镜需求
-  if (requirements.liuJinJing > 0 && userMaterials.liuJinJing < requirements.liuJinJing) {
-    const needed = requirements.liuJinJing - userMaterials.liuJinJing;
-    trainingCounts[8] = Math.ceil(needed / TRAINING_DROPS[8]);
+    // 计算各历练次数
+    const trainingCounts = {4:0, 6:0, 8:0, 10:0, 12:0};
     
-    // 扣除关联材料
-    ['jinShan', 'liuJing', 'baiJiu'].forEach(material => {
-      if (requirements[material]) {
-        requirements[material] -= trainingCounts[8] * TRAINING_DROPS[8];
-      }
-    });
-  }
+    // 从高阶到低阶计算
+    const processTrainingLevel = (level, primaryMat, secondaryMat) => {
+        const needed = Math.max(0, requirements[primaryMat] - userMaterials[primaryMat]);
+        if (needed <= 0) return 0;
+        
+        const count = Math.ceil(needed / TRAINING_DROPS[level]);
+        trainingCounts[level] = count;
+        
+        // 扣除关联材料需求
+        if (secondaryMat && requirements[secondaryMat]) {
+            requirements[secondaryMat] = Math.max(0, requirements[secondaryMat] - count * TRAINING_DROPS[level]);
+        }
+        
+        return count;
+    };
 
-  // 处理六博镜需求
-  if (requirements.liuJing > 0 && userMaterials.liuJing < requirements.liuJing) {
-    const needed = requirements.liuJing - userMaterials.liuJing;
-    trainingCounts[6] = Math.ceil(needed / TRAINING_DROPS[6]);
-    
-    // 扣除关联材料
-    ['cuiShan', 'qingJiu'].forEach(material => {
-      if (requirements[material]) {
-        requirements[material] -= trainingCounts[6] * TRAINING_DROPS[6];
-      }
-    });
-  }
+    // 从最高级开始计算
+    if (tier === 17) {
+        processTrainingLevel(12, 'xingHanJing', 'xianShan');
+    }
+    processTrainingLevel(10, 'shuiJing', 'baoShiJing');
+    processTrainingLevel(8, 'liuJinJing', 'jinShan');
+    processTrainingLevel(6, 'liuJing', 'cuiShan');
+    processTrainingLevel(4, 'tongJing', null);
 
-  // 4. 应用计算结果
-  applyToTraining(attribute, trainingCounts);
+    // 应用计算结果
+    applyToTraining(attribute, trainingCounts);
 };
     // ==================== 工具函数 ====================
     /**
