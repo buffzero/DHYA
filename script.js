@@ -955,56 +955,76 @@ const TRAINING_DROPS = {
 };
 
 // 计算并应用历练次数
+// 完全修正后的计算函数
 const calculateAndApply = () => {
   const attribute = dom.cultivationAttribute.value;
   const tier = parseInt(dom.cultivationTier.value);
   
-  // 1. 获取用户输入材料
-  const materialInputs = document.querySelectorAll(`#${attribute}-materials input`);
+  // 1. 获取用户材料输入
   const userMaterials = {};
-  materialInputs.forEach(input => {
+  document.querySelectorAll(`#${attribute}-materials input`).forEach(input => {
     userMaterials[input.dataset.material] = parseInt(input.value) || 0;
   });
 
-  // 2. 获取当前修为的需求
-  const requirements = MATERIAL_REQUIREMENTS[attribute][tier];
+  // 2. 获取当前修为需求
+  const requirements = JSON.parse(JSON.stringify(MATERIAL_REQUIREMENTS[attribute][tier]));
   
-  // 3. 计算缺少的材料
-  const missingMaterials = {};
-  Object.keys(requirements).forEach(material => {
-    missingMaterials[material] = Math.max(0, requirements[material] - (userMaterials[material] || 0));
-  });
-
-  // 4. 修正后的核心计算逻辑
+  // 3. 计算精确的历练次数 (修正核心算法)
   const trainingCounts = {4:0, 6:0, 8:0, 10:0, 12:0};
   
-  // 从高到低处理每个历练层级
-  [12, 10, 8, 6, 4].forEach(level => {
-    const materials = TRAINING_RELATIONS[level];
-    let maxCount = 0;
+  // 特殊处理星汉镜（最高级材料优先计算）
+  if (requirements.xingHanJing > 0 && userMaterials.xingHanJing < requirements.xingHanJing) {
+    const needed = requirements.xingHanJing - userMaterials.xingHanJing;
+    trainingCounts[12] = Math.ceil(needed / TRAINING_DROPS[12]);
     
-    // 计算该层能解决的最大次数
-    materials.forEach(material => {
-      if (missingMaterials[material] > 0) {
-        const drops = TRAINING_DROPS[level];
-        const count = Math.ceil(missingMaterials[material] / drops);
-        maxCount = Math.max(maxCount, count);
+    // 扣除其他关联材料需求
+    ['xianShan', 'shuiJing', 'baWangLei'].forEach(material => {
+      if (requirements[material]) {
+        requirements[material] -= trainingCounts[12] * TRAINING_DROPS[12];
       }
     });
-    
-    // 分配历练次数
-    if (maxCount > 0) {
-      trainingCounts[level] = maxCount;
-      
-      // 扣除已解决的材料需求
-      materials.forEach(material => {
-        missingMaterials[material] = Math.max(0, 
-          missingMaterials[material] - maxCount * TRAINING_DROPS[level]);
-      });
-    }
-  });
+  }
 
-  // 5. 应用结果到界面
+  // 处理水镜需求（次优先级）
+  if (requirements.shuiJing > 0 && userMaterials.shuiJing < requirements.shuiJing) {
+    const needed = requirements.shuiJing - userMaterials.shuiJing;
+    trainingCounts[10] = Math.ceil(needed / TRAINING_DROPS[10]);
+    
+    // 扣除关联材料
+    ['yuShan', 'baoShiJing', 'lingQuan'].forEach(material => {
+      if (requirements[material]) {
+        requirements[material] -= trainingCounts[10] * TRAINING_DROPS[10];
+      }
+    });
+  }
+
+  // 处理鎏金镜需求
+  if (requirements.liuJinJing > 0 && userMaterials.liuJinJing < requirements.liuJinJing) {
+    const needed = requirements.liuJinJing - userMaterials.liuJinJing;
+    trainingCounts[8] = Math.ceil(needed / TRAINING_DROPS[8]);
+    
+    // 扣除关联材料
+    ['jinShan', 'liuJing', 'baiJiu'].forEach(material => {
+      if (requirements[material]) {
+        requirements[material] -= trainingCounts[8] * TRAINING_DROPS[8];
+      }
+    });
+  }
+
+  // 处理六博镜需求
+  if (requirements.liuJing > 0 && userMaterials.liuJing < requirements.liuJing) {
+    const needed = requirements.liuJing - userMaterials.liuJing;
+    trainingCounts[6] = Math.ceil(needed / TRAINING_DROPS[6]);
+    
+    // 扣除关联材料
+    ['cuiShan', 'qingJiu'].forEach(material => {
+      if (requirements[material]) {
+        requirements[material] -= trainingCounts[6] * TRAINING_DROPS[6];
+      }
+    });
+  }
+
+  // 4. 应用计算结果
   applyToTraining(attribute, trainingCounts);
 };
     // ==================== 工具函数 ====================
