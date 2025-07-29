@@ -807,3 +807,105 @@ input[type="checkbox"] {
   font-size: 0.8em;
   opacity: 0.7;
 }
+/* ==================== 修为材料模块优化 - 统一两列布局 ==================== */
+/* 选择区域 - 并排布局 */
+.section > .input-row {
+  display: flex;
+  gap: 1rem;
+  padding: 16px 20px;
+}
+
+.section > .input-row > div {
+  flex: 1;
+  min-width: 0; /* 防止内容溢出 */
+}
+
+.section > .input-row label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+  color: var(--gray-800);
+  font-weight: 500;
+}
+
+.section > .input-row select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  font-size: 1rem;
+}
+
+/* 材料输入网格布局 - 始终两列 */
+.material-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  padding: 0 20px 16px;
+}
+
+.material-input {
+  display: flex;
+  flex-direction: column;
+}
+
+.material-input label {
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+  color: var(--gray-800);
+}
+
+.material-input input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  font-size: 1rem;
+}
+
+/* 计算按钮样式 */
+.actions {
+  display: flex;
+  justify-content: center;
+  padding: 0 20px 16px;
+}
+
+#calculate-cultivation {
+  background-color: var(--blue);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 12px 24px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  width: 100%;
+  max-width: 300px; /* 限制最大宽度 */
+}
+
+#calculate-cultivation:hover {
+  background-color: #68b3ff;
+}
+
+/* 移动端优化 - 保持两列但调整间距 */
+@media (max-width: 600px) {
+  .section > .input-row {
+    gap: 0.5rem; /* 缩小间距 */
+  }
+  
+  .material-inputs {
+    gap: 0.8rem; /* 缩小网格间隙 */
+    padding: 0 10px 12px; /* 减少内边距 */
+  }
+  
+  .material-input input {
+    padding: 6px 10px; /* 缩小输入框内边距 */
+    font-size: 0.9rem; /* 稍微减小字体 */
+  }
+  
+  #calculate-cultivation {
+    padding: 10px 16px; /* 缩小按钮尺寸 */
+    font-size: 1rem; /* 稍微减小字体 */
+  }
+}
