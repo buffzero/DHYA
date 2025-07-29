@@ -956,103 +956,56 @@ const TRAINING_DROPS = {
 
 // 计算并应用历练次数
 const calculateAndApply = () => {
-    const attribute = dom.cultivationAttribute.value;
-    const tier = parseInt(dom.cultivationTier.value);
-    
-    // 获取用户输入的材料数量
-    const materialInputs = document.querySelectorAll(`#${attribute}-materials input`);
-    const userMaterials = {};
-    
-    materialInputs.forEach(input => {
-        const material = input.dataset.material;
-        userMaterials[material] = parseInt(input.value) || 0;
-    });
-    
-    // 计算缺少的材料
-    const requirements = MATERIAL_REQUIREMENTS[attribute][tier];
-    const missingMaterials = {};
-    
-    Object.keys(requirements).forEach(material => {
-        const required = requirements[material];
-        const has = userMaterials[material] || 0;
-        missingMaterials[material] = Math.max(0, required - has);
-    });
-    
-    // 计算各层历练次数
-    const trainingCounts = {4: 0, 6: 0, 8: 0, 10: 0, 12: 0};
-    
-    // 从高到低计算历练层数
-    [12, 10, 8, 6, 4].forEach(level => {
-        const materials = TRAINING_RELATIONS[level];
-        
-        // 计算该层能解决的材料缺口
-        let maxCount = 0;
-        materials.forEach(material => {
-            if (missingMaterials[material] > 0) {
-                const count = Math.ceil(missingMaterials[material] / TRAINING_DROPS[level]);
-                if (count > maxCount) maxCount = count;
-            }
-        });
-        
-        // 更新历练次数和剩余材料
-        if (maxCount > 0) {
-            trainingCounts[level] = maxCount;
-            
-            materials.forEach(material => {
-                if (missingMaterials[material] > 0) {
-                    missingMaterials[material] = Math.max(0, 
-                        missingMaterials[material] - maxCount * TRAINING_DROPS[level]);
-                }
-            });
-        }
-    });
-    
-    // 应用计算结果到历练模块
-    applyToTraining(attribute, trainingCounts);
-    
-    alert('计算结果已应用到历练模块！');
-};
+  const attribute = dom.cultivationAttribute.value;
+  const tier = parseInt(dom.cultivationTier.value);
+  
+  // 1. 获取用户输入材料
+  const materialInputs = document.querySelectorAll(`#${attribute}-materials input`);
+  const userMaterials = {};
+  materialInputs.forEach(input => {
+    userMaterials[input.dataset.material] = parseInt(input.value) || 0;
+  });
 
-// 将计算结果应用到历练模块
-const applyToTraining = (attribute, trainingCounts) => {
-    // 属性到历练类别的映射
-    const attributeToTraining = {
-        windFire: 'windFire',
-        yinYang: 'yinYang',
-        earthWater: 'earthWater'
-    };
+  // 2. 获取当前修为的需求
+  const requirements = MATERIAL_REQUIREMENTS[attribute][tier];
+  
+  // 3. 计算缺少的材料
+  const missingMaterials = {};
+  Object.keys(requirements).forEach(material => {
+    missingMaterials[material] = Math.max(0, requirements[material] - (userMaterials[material] || 0));
+  });
+
+  // 4. 修正后的核心计算逻辑
+  const trainingCounts = {4:0, 6:0, 8:0, 10:0, 12:0};
+  
+  // 从高到低处理每个历练层级
+  [12, 10, 8, 6, 4].forEach(level => {
+    const materials = TRAINING_RELATIONS[level];
+    let maxCount = 0;
     
-    const trainingCategory = attributeToTraining[attribute];
-    
-    // 历练层数到历练项的索引映射
-    const levelToIndex = {
-        4: 0,
-        6: 1,
-        8: 2,
-        10: 3,
-        12: 4
-    };
-    
-    // 更新历练次数
-    Object.entries(trainingCounts).forEach(([level, count]) => {
-        const index = levelToIndex[level];
-        if (index !== undefined) {
-            const input = document.querySelector(
-                `.training-count-input[data-category="${trainingCategory}"][data-index="${index}"]`
-            );
-            
-            if (input) {
-                input.value = count;
-                
-                // 更新状态
-                state.training[trainingCategory][index].required = count;
-                state.training[trainingCategory][index].userModified = true;
-            }
-        }
+    // 计算该层能解决的最大次数
+    materials.forEach(material => {
+      if (missingMaterials[material] > 0) {
+        const drops = TRAINING_DROPS[level];
+        const count = Math.ceil(missingMaterials[material] / drops);
+        maxCount = Math.max(maxCount, count);
+      }
     });
     
-    // 保存并更新UI
-    updateAndSave();
+    // 分配历练次数
+    if (maxCount > 0) {
+      trainingCounts[level] = maxCount;
+      
+      // 扣除已解决的材料需求
+      materials.forEach(material => {
+        missingMaterials[material] = Math.max(0, 
+          missingMaterials[material] - maxCount * TRAINING_DROPS[level]);
+      });
+    }
+  });
+
+  // 5. 应用结果到界面
+  applyToTraining(attribute, trainingCounts);
 };
     // ==================== 工具函数 ====================
     /**
