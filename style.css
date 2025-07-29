@@ -911,36 +911,26 @@ input[type="checkbox"] {
     font-size: 1rem;
   }
 }
-/* ==================== 隐藏修为完成次数显示 ==================== */
-.completion-badges {
-  display: none !important; /* 完全隐藏修为完成次数徽章 */
-}
-
-/* 同时移除标题区域的额外间距 */
-.training-category-title .title-controls-container {
-  display: none;
-}
-
-/* 调整分类标题布局 */
-.training-category-title {
-  justify-content: center !important; /* 标题居中 */
-  padding: 8px 12px !important;
-}
 /* ==================== 仅隐藏完成次数徽章 ==================== */
 .completion-badges {
   display: none !important; /* 只隐藏次数徽章 */
 }
 
-/* 保持其他控件可见 */
+/* 确保其他控件仍然显示 */
 .training-controls,
 .tier-select,
 .reset-category-btn {
-  display: inline-block !important; /* 确保这些元素仍然显示 */
+  display: inline-block !important;
 }
 
-/* 调整标题控件容器布局 */
+/* 调整标题区域布局 */
+.training-category-title {
+  justify-content: space-between !important; /* 恢复原有布局 */
+  padding: 8px 12px !important;
+}
+
 .title-controls-container {
   display: flex;
   align-items: center;
-  gap: 10px; /* 保持按钮和下拉框的间距 */
+  gap: 10px;
 }
