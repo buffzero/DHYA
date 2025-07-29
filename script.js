@@ -271,17 +271,22 @@ const ResourceTracker = (() => {
 
     // 检查历练完成情况
    const checkTrainingCompletion = (category, tier) => {
-        const floors = [4, 6, 8, 10, 12];
-        let minCompletion = Infinity;
+    const floors = [4, 6, 8, 10, 12];
+    let minCompletion = Infinity;
+    
+    floors.forEach((floor, index) => {
+        // 修复：使用当前选择的修为等级对应的要求次数
+        const required = GAME_DATA.trainingPresets[tier][floor];
+        const completed = state.training[category][index].completed;
         
-        floors.forEach((floor, index) => {
-            const required = GAME_DATA.trainingPresets[tier][floor];
-            const completed = state.training[category][index].completed;
-            minCompletion = Math.min(minCompletion, Math.floor(completed / required));
-        });
-        
-        return minCompletion === Infinity ? 0 : minCompletion;
-    };
+        // 计算完成比例并取整
+        const completionRatio = completed / required;
+        minCompletion = Math.min(minCompletion, completionRatio);
+    });
+    
+    // 返回最小完成比例的整数部分
+    return minCompletion === Infinity ? 0 : Math.floor(minCompletion);
+};
 
     // ==================== setupDOM 函数 ====================
     const setupDOM = () => {
