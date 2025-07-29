@@ -202,8 +202,8 @@ const ResourceTracker = (() => {
             setupDOM();
             loadData();
             renderAll();
+            setupCultivationListeners();
             setupEventListeners();
-            setupCultivationListeners(); 
             console.log('✅ 初始化完成');
         } catch (error) {
             console.error('初始化过程中出错:', error);
@@ -288,7 +288,10 @@ const ResourceTracker = (() => {
                 'materialsList',
                 'moneyCheck',
                 'fragments',
-                'scrolls'
+                'scrolls',
+                'cultivationAttribute',  // 新增
+                'cultivationTier',       // 新增
+                'calculateCultivation'   // 新增
             ];
             
             criticalElements.forEach(key => {
@@ -904,17 +907,29 @@ const ResourceTracker = (() => {
     };
 // 新增函数：设置修为材料事件监听
 const setupCultivationListeners = () => {
-    // 属性切换显示对应材料
-    dom.cultivationAttribute.addEventListener('change', (e) => {
-        const attribute = e.target.value;
-        document.querySelectorAll('.material-inputs').forEach(el => {
-            el.style.display = 'none';
+    try {
+        // 属性切换显示对应材料
+        dom.cultivationAttribute?.addEventListener('change', (e) => {
+            const attribute = e.target.value;
+            document.querySelectorAll('.material-inputs').forEach(el => {
+                el.style.display = 'none';
+            });
+            const target = document.getElementById(`${attribute}-materials`);
+            if (target) target.style.display = 'grid';
         });
-        document.getElementById(`${attribute}-materials`).style.display = 'grid';
-    });
-    
-    // 计算并应用按钮
-    dom.calculateCultivation.addEventListener('click', calculateAndApply);
+        
+        // 计算并应用按钮
+        dom.calculateCultivation?.addEventListener('click', () => {
+            try {
+                calculateAndApply();
+            } catch (error) {
+                console.error('计算修为材料出错:', error);
+                alert('计算失败，请检查控制台查看详情');
+            }
+        });
+    } catch (error) {
+        console.error('初始化修为材料监听失败:', error);
+    }
 };
 
 // 材料需求配置
@@ -970,17 +985,23 @@ const TRAINING_DROPS = {
 };
 // 计算并应用历练次数
 const calculateAndApply = () => {
+    console.log('开始计算修为材料...'); // 调试信息
+    
     const attribute = dom.cultivationAttribute.value;
     const tier = parseInt(dom.cultivationTier.value);
+    
+    console.log(`属性: ${attribute}, 修为: ${tier}`); // 调试信息
     
     // 获取用户输入的材料数量
     const userMaterials = {};
     document.querySelectorAll(`#${attribute}-materials input`).forEach(input => {
         userMaterials[input.dataset.material] = parseInt(input.value) || 0;
+        console.log(`${input.dataset.material}: ${userMaterials[input.dataset.material]}`); // 调试信息
     });
 
     // 获取当前修为需求
     const requirements = JSON.parse(JSON.stringify(MATERIAL_REQUIREMENTS[attribute][tier]));
+    console.log('材料需求:', requirements); // 调试信息
     
     // 计算各历练次数
     const trainingCounts = {4:0, 6:0, 8:0, 10:0, 12:0};
@@ -1002,16 +1023,28 @@ const calculateAndApply = () => {
     };
 
     // 从最高级开始计算
-    if (tier === 17) {
+    if (tier === 17 && requirements.xingHanJing > 0) {
         processTrainingLevel(12, 'xingHanJing', 'xianShan');
     }
-    processTrainingLevel(10, 'shuiJing', 'baoShiJing');
-    processTrainingLevel(8, 'liuJinJing', 'jinShan');
-    processTrainingLevel(6, 'liuJing', 'cuiShan');
-    processTrainingLevel(4, 'tongJing', null);
+    if (requirements.shuiJing > 0) {
+        processTrainingLevel(10, 'shuiJing', 'baoShiJing');
+    }
+    if (requirements.liuJinJing > 0) {
+        processTrainingLevel(8, 'liuJinJing', 'jinShan');
+    }
+    if (requirements.liuJing > 0) {
+        processTrainingLevel(6, 'liuJing', 'cuiShan');
+    }
+    if (requirements.tongJing > 0) {
+        processTrainingLevel(4, 'tongJing', null);
+    }
 
+    console.log('计算结果:', trainingCounts); // 调试信息
+    
     // 应用计算结果
     applyToTraining(attribute, trainingCounts);
+    
+    alert('计算完成，已自动应用历练次数！'); // 添加用户反馈
 };
     // ==================== 工具函数 ====================
     /**
