@@ -586,39 +586,72 @@ input[type="checkbox"] {
   border-color: var(--blue);
   box-shadow: 0 0 0 1px rgba(0,0,0,0.1); /* 添加轻微阴影 */
 }
-/* ==================== 按钮样式 ==================== */
 
-/* 历练操作按钮容器 */
+/* ==================== 历练操作按钮 ==================== */
 .training-actions {
-  all: unset;             /* 重置所有继承样式 */
+  all: unset;
   display: grid;
-  grid-template-columns: repeat(2, 1fr); /* 两列布局 */
-  gap: 8px;               /* 按钮间距 */
-  width: 100%;            /* 占满容器宽度 */
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  width: 100%;
 }
-/* 新增的修为选择器样式 */
-.tier-select {
-    margin-left: 0; /* 修改：移除原有左边距 */
-    padding: 3px 5px; /* 原有属性保留 */
-    border-radius: 4px; /* 原有属性保留 */
-    border: 1px solid var(--gray-200); /* 原有属性保留 */
-    font-size: 12px; /* 原有属性保留 */
-    background: white; /* 原有属性保留 */
-    height: auto; /* 新增：高度自适应 */
+
+/* PC端布局 */
+@media (min-width: 601px) {
+  .training-actions {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  /* 调整按钮顺序 */
+  .training-actions .consume-btn[data-count="1"] { order: 1; }
+  .training-actions .consume-btn[data-count="3"] { order: 2; }
+  .training-actions .consume-btn[data-count="6"] { order: 3; }
+  .training-actions .custom-consume { order: 4; }
+  .training-actions .custom-consume-input { 
+    order: 5; 
+    grid-column: span 1;
+    width: 100%;
+  }
+  .training-actions .undo-btn { 
+    order: 6; 
+    grid-column: span 1;
+  }
 }
+
+/* 移动端布局 */
+@media (max-width: 600px) {
+  .training-actions {
+    grid-template-areas:
+      "one three"
+      "six custom"
+      "input undo";
+  }
+  
+  .training-actions .consume-btn[data-count="1"] { grid-area: one; }
+  .training-actions .consume-btn[data-count="3"] { grid-area: three; }
+  .training-actions .consume-btn[data-count="6"] { grid-area: six; }
+  .training-actions .custom-consume { grid-area: custom; }
+  .training-actions .custom-consume-input { 
+    grid-area: input;
+    width: 100%;
+  }
+  .training-actions .undo-btn { grid-area: undo; }
+}
+
 /* 按钮基础样式 */
 .training-actions button {
   padding: 8px 12px;
-  min-width: 0;           /* 允许宽度缩小 */
-  white-space: nowrap;    /* 禁止文字换行 */
-  overflow: visible;      /* 显示溢出内容 */
+  min-width: 0;
+  white-space: nowrap;
+  overflow: visible;
   border: none;
   border-radius: var(--radius-sm);
   font-size: 0.9rem;
   font-weight: 500;
   text-align: center;
-  transition: all 0.2s;   /* 悬停动画 */
-  cursor: pointer;        /* 手型指针 */
+  transition: all 0.2s;
+  cursor: pointer;
 }
 
 /* 核销按钮（主操作按钮） */
@@ -631,19 +664,19 @@ input[type="checkbox"] {
 .consume-btn:disabled {
   opacity: 0.5;
   color: var(--gray-800) !important;
-  cursor: not-allowed;    /* 禁用指针 */
-  background: var(--blue); /* 保持颜色一致 */
+  cursor: not-allowed;
+  background: var(--blue);
 }
 
 /* 核销按钮悬停效果 */
 .consume-btn:not(:disabled):hover {
-  background: #68b3ff;    /* 深蓝色 */
-  box-shadow: var(--shadow-sm); /* 添加阴影 */
+  background: #68b3ff;
+  box-shadow: var(--shadow-sm);
 }
 
 /* 核销按钮点击效果 */
 .consume-btn:active {
-  transform: scale(0.98); /* 轻微缩小 */
+  transform: scale(0.98);
 }
 
 /* 撤销按钮（次要操作按钮） */
@@ -684,7 +717,7 @@ input[type="checkbox"] {
 
 /* 重置按钮悬停效果 */
 .reset-btn:hover {
-  background: rgba(255, 59, 48, 0.1); /* 浅红色背景 */
+  background: rgba(255, 59, 48, 0.1);
 }
 
 /* 重置按钮点击效果 */
@@ -693,358 +726,18 @@ input[type="checkbox"] {
 }
 
 .footer-controls {
-  max-width: 800px; /* 与主容器同宽 */
-  margin: 0 auto; /* 水平居中 */
+  max-width: 800px;
+  margin: 0 auto;
   padding: 20px;
-  text-align: center; /* 内容居中 */
+  text-align: center;
 }
 #lastUpdated {
   text-align: center;
-  display: block; /* 确保居中生效 */
+  display: block;
   padding: 6px;
 }
 
-/* ==================== 按钮布局响应式 ==================== */
-
-/* PC端布局（宽度>600px） */
-@media (min-width: 601px) {
-  .training-actions {
-    display: flex !important;
-    flex-direction: row !important;
-    flex-wrap: nowrap !important;
-    justify-content: space-between !important;
-  }
-  
-  .training-actions button {
-    width: auto !important; /* 自动宽度 */
-    max-width: none !important; /* 取消最大宽度限制 */
-    flex: 1 1 0 !important; /* 等分空间 */
-  }
-}
-
-/* 移动端布局（宽度≤600px） */
-@media (max-width: 600px) {
-  /* ===== 全局文字间距压缩 ===== */
-  body {
-    line-height: 1.15;  /* 默认1.25 → 1.15 */
-  }
-  
-  /* ===== 历练标题区域优化 ===== */
-  .training-category-title {
-    flex-direction: row; /* 保持水平布局 */
-    align-items: center;
-    gap: 10px;
-    padding: 10px;
-  }
-  
-  .completion-badges {
-    margin-right: auto; /* 徽章靠左 */
-    display: flex;
-    gap: 6px;
-  }
-  
-  .training-controls {
-    display: flex;
-    gap: 8px;
-  }
-  
-  /* ===== 历练操作按钮优化 ===== */
-  .training-actions {
-    grid-template-columns: repeat(2, 1fr); /* 两列布局 */
-    gap: 8px; /* 按钮间距 */
-  }
-  
-  /* 确保每个按钮占据整列 */
-  .training-actions button {
-    width: 100%;
-  }
-  
-  /* 自定义输入框和按钮单独处理 */
-  .training-actions .custom-consume {
-    grid-column: 1 / -1; /* 跨两列 */
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-  }
-  
-  .training-actions .custom-consume-input {
-    flex: 1;
-    max-width: 80px;
-  }
-  
-  .training-actions .undo-btn {
-    grid-column: 1 / -1; /* 跨两列 */
-  }
-  
-  /* ===== 主要容器内边距调整 ===== */
-  #resourceTracker,
-  .target-section,
-  .status-column,
-  .training-category {
-    padding-top: 10px;    /* 原16-20px → 12px */
-    padding-bottom: 10px;
-    padding-left: 3%;
-    padding-right: 3%;
-  }
-  
-  /* ===== 列表项紧凑模式 ===== */
-  .status-item,
-  .training-item,
-  .resource-item {
-    padding-top: 6px;     /* 原12-16px → 8px */
-    padding-bottom: 6px;
-    margin-bottom: 6px;   /* 原8-12px → 6px */
-  }
-  
-  /* ===== 按钮/输入框高度压缩 ===== */
-  .training-actions button,
-  .training-count-input,
-  .sub-status-indicator {
-    height: 26px;         /* 原28-32px → 26px */
-    padding-top: 0;
-    padding-bottom: 0;
-  }
-  
-  /* ===== 标题间距调整 ===== */
-  .section-title,
-  .training-category-title,
-  .status-column h3 {
-    padding-top: 8px;     /* 原8-12px → 6px */
-    padding-bottom: 8px;
-    margin-bottom: 8px;   /* 原12-16px → 8px */
-  }
-
-  /* ===== 状态面板文字缩小 ===== */
-  /* 职业名称（诡道/神机等） */
-  .status-item.guidao,
-  .status-item.shenji,
-  .status-item.qihuang,
-  .status-item.longdun,
-  .status-item.pojun {
-    font-size: 14px;  /* 原15-16px → 13px */
-    padding: 8px 10px; /* 同步缩小内边距 */
-  }
-  
-  /* 属性名称（阴/阳等） */
-  .status-item.yin,
-  .status-item.yang,
-  .status-item.feng,
-  .status-item.huo,
-  .status-item.di,
-  .status-item.shui {
-    font-size: 13px;  /* 特殊属性更小字号 */
-  }
-  
-  /* 状态文字（可满级/待沉淀） */
-  .status-column .status-indicator {
-    font-size: 10px;  /* 保持与之前修改一致 */
-  }
-  
-  .training-count-input {
-    width: 50px;
-    border-radius: 6px;
-    text-align: right;
-    font-size: 12px;
-    padding: 2px 4px;
-  }
-  
-  .sub-status-indicator {
-    min-width: 60px;
-    font-size: 12px;
-    padding: 2px 4px;
-  }
-
-  .status-indicator {
-    font-size: 10px;
-  }
-
-  .target-section .status-indicator {
-    font-size: 10px;
-    padding: 1px 6px;
-  }
-  
-  /* 历练区域的[已满足/未满足]状态框 */
-  .sub-status-indicator {
-    min-width: 46px;
-    padding: 2px 4px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-  }
-
-  .circle {
-    width: 12px;
-    height: 12px;
- }
-  
-  .circles-container {
-    gap: 4px;
- }
-
-  .training-item .training-name {
-    min-width: 5.5em;  /* 刚好容纳"【历练·十二】" */
-    font-size: 0.95em; /* 可选：微调字体大小 */
-  }
-  
-  /* 徽章缩小并换行显示 */
-  .completion-badge {
-      font-size: 11px;
-      padding: 1px 4px;
-  }
-}
-
-/* 超小屏幕优化（宽度≤340px） */
-@media (max-width: 340px) {
-  .circle {
-    width: 14px;
-    height: 14px;
-    min-width: 14px;
-  }
-  
-  .training-category-title {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  
-  .training-controls {
-    width: 100%;
-  }
-}
-/* ==================== 修为材料 ==================== */
-.cultivation-controls {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
-    padding: 16px;
-    background: var(--gray-50);
-    border-radius: var(--radius-sm);
-    margin-bottom: 16px;
-}
-
-.input-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.input-row label {
-    font-weight: 500;
-    color: var(--gray-800);
-}
-
-.input-row select {
-    padding: 8px 12px;
-    border: 1px solid var(--gray-200);
-    border-radius: var(--radius-sm);
-    background: var(--white);
-}
-
-.material-inputs {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-    padding: 0 16px 16px;
-}
-
-.material-input {
-    display: flex;
-    flex-direction: column;
-}
-
-.material-input label {
-    font-weight: 500;
-    margin-bottom: 4px;
-    color: var(--gray-800);
-}
-
-.material-input input {
-    padding: 8px 12px;
-    border: 1px solid var(--gray-200);
-    border-radius: var(--radius-sm);
-}
-
-.actions {
-    padding: 0 16px 16px;
-    text-align: center;
-}
-
-#calculate-cultivation {
-    padding: 10px 20px;
-    background: var(--blue);
-    color: var(--black);
-    border: none;
-    border-radius: var(--radius-sm);
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-#calculate-cultivation:hover {
-    background: #68b3ff;
-    box-shadow: var(--shadow-sm);
-}
-/* ==================== 按钮微交互 ==================== */
-button {
-  transition: 
-    transform 0.1s ease,
-    background-color 0.2s ease,
-    box-shadow 0.2s ease; /* 平滑过渡效果 */
-}
-
-button:active {
-  transform: scale(0.98); /* 点击时轻微缩小 */
-  box-shadow: none; /* 移除阴影 */
-}
-
-/* 禁用按钮的悬停效果 */
-button:disabled:hover {
-  transform: none;
-  box-shadow: none;
-}
-
-/* 自定义核销部分 */
-.custom-consume {
-    background: var(--blue);
-    color: rgb(41, 41, 41);
-    padding: 8px 12px;
-    border-radius: var(--radius-sm);
-}
-
-.custom-consume-input {
-    width: 60px;
-    height: 28px;
-    padding: 4px 6px;
-    border: 1px solid var(--gray-200);
-    border-radius: var(--radius-sm);
-    text-align: center;
-    font-size: 14px;
-}
-
-/* === helper styles === */
-.btn-reset{
-  background:#ff6b6b;
-  color:#fff;
-  border:none;
-  padding:4px 10px;
-  border-radius:6px;
-  font-size:0.8rem;
-  cursor:pointer;
-  transition:opacity .2s;
-}
-.btn-reset:hover{opacity:.85;}
-/* 一键撤销按钮 */
-.reset-category-btn {
-     background: #ff6b6b; /* 原有属性保留 */
-    color: white; /* 原有属性保留 */
-    border: none; /* 原有属性保留 */
-    padding: 3px 8px; /* 修改：调整原有内边距 */
-    border-radius: 4px; /* 原有属性保留 */
-    font-size: 12px; /* 原有属性保留 */
-    cursor: pointer; /* 原有属性保留 */
-    white-space: nowrap; /* 新增：防止文字换行 */
-}
-.reset-category-btn:hover {
-    background: #ff5252;
-}
+/* ==================== 其他样式 ==================== */
 /* 修为选择器 */
 .tier-select {
   margin-left: 10px;
@@ -1055,92 +748,62 @@ button:disabled:hover {
   background: white;
   height: auto;
 }
+
 /* 完成次数徽章样式 */
 .completion-badges {
-    display: flex;
-    gap: 6px;
-}
-/* 新增控制按钮容器样式 */
-.training-controls {
-    display: flex;
-    gap: 8px;
+  display: flex;
+  gap: 6px;
 }
 
 .completion-badge {
-    font-size: 12px;
-    padding: 2px 6px;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.9);
-    color: #333;
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-    display: flex;
-    align-items: center;
-    line-height: 1;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #333;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  line-height: 1;
 }
 
 /* 不同修为的徽章颜色 */
 .completion-badge.tier-13 {
-    background: linear-gradient(135deg, #a5d8ff, #74c0fc);
-    color: #1864ab;
+  background: linear-gradient(135deg, #a5d8ff, #74c0fc);
+  color: #1864ab;
 }
 
 .completion-badge.tier-15 {
-    background: linear-gradient(135deg, #b2f2bb, #40c057);
-    color: #2b8a3e;
+  background: linear-gradient(135deg, #b2f2bb, #40c057);
+  color: #2b8a3e;
 }
 
 .completion-badge.tier-17 {
-    background: linear-gradient(135deg, #ffc9c9, #fa5252);
-    color: #c92a2a;
+  background: linear-gradient(135deg, #ffc9c9, #fa5252);
+  color: #c92a2a;
 }
 
 /* 修为完成状态 */
 .completion-badge.completed {
-    box-shadow: 0 0 0 2px currentColor;
+  box-shadow: 0 0 0 2px currentColor;
 }
 
-/* 调整标题布局 */
-.training-category-title {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between; /* 确保内容分布在两端 */
-    padding: 8px 12px;
-}
-/* 新增控制容器样式 */
-.title-controls-container {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-/* 新增通用样式 */
-.category-name {
-    font-weight: 600;
-    margin-right: auto;
-}
-
-.training-controls {
-    display: flex;
-    gap: 8px;
-    width: 100%;
-}
 /* 可完成状态的徽章 */
 .completion-badge.available {
-    animation: pulse 1.5s infinite;
-    border: 1px solid var(--green);
+  animation: pulse 1.5s infinite;
+  border: 1px solid var(--green);
 }
 
 @keyframes pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-    100% { transform: scale(1); }
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
 }
 
 /* 数字显示优化 */
 .completion-badge::after {
-    content: "次";
-    font-size: 0.8em;
-    opacity: 0.7;
+  content: "次";
+  font-size: 0.8em;
+  opacity: 0.7;
 }
