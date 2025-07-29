@@ -970,38 +970,70 @@ const TRAINING_DROPS = {
 };
 
  const applyToTraining = (category, counts) => {
+    console.log('应用计算结果到历练:', category, counts); // 调试信息
+    
     const floors = [4, 6, 8, 10, 12];
     
     floors.forEach((floor, index) => {
         const count = counts[floor] || 0;
         if (count > 0) {
-            handleConsume(category, index, count);
+            // 直接更新状态而不是调用 handleConsume
+            const trainingItem = state.training[category][index];
+            if (trainingItem) {
+                trainingItem.completed += count;
+                
+                // 记录操作历史
+                state.trainingHistory.push({
+                    category,
+                    index,
+                    previousCount: trainingItem.completed - count,
+                    count: count,
+                    timestamp: new Date().toISOString()
+                });
+            }
         }
     });
     
-    // 更新显示
-    renderTraining();
-    saveData();
-};
+    // 更新修为完成记录
+    [13, 15, 17].forEach(tier => {
+        const totalAvailable = checkTrainingCompletion(category, tier);
+        const alreadyCompleted = state.trainingCompletions[category][tier] || 0;
+        
+        if (totalAvailable > alreadyCompleted) {
+            state.trainingCompletions[category][tier] = totalAvailable;
+        }
+    });
+    
+    // 强制保存并重新渲染
+    updateAndSave();
 // 计算并应用历练次数
 const calculateAndApply = () => {
-    console.log('开始计算修为材料...'); // 调试信息
+    console.log('开始计算修为材料...');
     
     const attribute = dom.cultivationAttribute.value;
     const tier = parseInt(dom.cultivationTier.value);
+    const category = attribute === 'yinYang' ? 'yinYang' : 
+                    attribute === 'windFire' ? 'windFire' : 'earthWater';
     
-    console.log(`属性: ${attribute}, 修为: ${tier}`); // 调试信息
+    console.log(`属性: ${attribute}, 修为: ${tier}, 对应历练类别: ${category}`);
     
     // 获取用户输入的材料数量
     const userMaterials = {};
-    document.querySelectorAll(`#${attribute}-materials input`).forEach(input => {
+    const materialInputs = document.querySelectorAll(`#${attribute}-materials input`);
+    if (!materialInputs.length) {
+        console.error('找不到材料输入框');
+        alert('错误：找不到对应的材料输入区域');
+        return;
+    }
+    
+    materialInputs.forEach(input => {
         userMaterials[input.dataset.material] = parseInt(input.value) || 0;
-        console.log(`${input.dataset.material}: ${userMaterials[input.dataset.material]}`); // 调试信息
+        console.log(`${input.dataset.material}: ${userMaterials[input.dataset.material]}`);
     });
 
     // 获取当前修为需求
     const requirements = JSON.parse(JSON.stringify(MATERIAL_REQUIREMENTS[attribute][tier]));
-    console.log('材料需求:', requirements); // 调试信息
+    console.log('材料需求:', requirements);
     
     // 计算各历练次数
     const trainingCounts = {4:0, 6:0, 8:0, 10:0, 12:0};
@@ -1039,13 +1071,19 @@ const calculateAndApply = () => {
         processTrainingLevel(4, 'tongJing', null);
     }
 
-    console.log('计算结果:', trainingCounts); // 调试信息
+    console.log('计算结果:', trainingCounts);
     
     // 应用计算结果
-    applyToTraining(attribute, trainingCounts);
+    applyToTraining(category, trainingCounts);
     
-    alert('计算完成，已自动应用历练次数！'); // 添加用户反馈
+    alert(`计算完成！已自动应用历练次数：
+    历练四: ${trainingCounts[4]}次
+    历练六: ${trainingCounts[6]}次
+    历练八: ${trainingCounts[8]}次
+    历练十: ${trainingCounts[10]}次
+    历练十二: ${trainingCounts[12]}次`);
 };
+
     // ==================== 工具函数 ====================
     /**
  * 兼容旧版数据迁移
