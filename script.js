@@ -908,30 +908,42 @@ const ResourceTracker = (() => {
 // 新增函数：设置修为材料事件监听
 const setupCultivationListeners = () => {
     try {
+        // 确保DOM元素已加载
+        if (!dom.cultivationAttribute || !dom.cultivationTier || !dom.calculateCultivation) {
+            console.error('修为材料相关DOM元素未找到');
+            return;
+        }
+
         // 属性切换显示对应材料
-        dom.cultivationAttribute?.addEventListener('change', (e) => {
+        dom.cultivationAttribute.addEventListener('change', (e) => {
             const attribute = e.target.value;
             document.querySelectorAll('.material-inputs').forEach(el => {
                 el.style.display = 'none';
             });
             const target = document.getElementById(`${attribute}-materials`);
-            if (target) target.style.display = 'grid';
+            if (target) {
+                target.style.display = 'grid';
+            } else {
+                console.error('找不到材料容器:', `${attribute}-materials`);
+            }
         });
         
         // 计算并应用按钮
-        dom.calculateCultivation?.addEventListener('click', () => {
+        dom.calculateCultivation.addEventListener('click', () => {
             try {
                 calculateAndApply();
             } catch (error) {
                 console.error('计算修为材料出错:', error);
-                alert('计算失败，请检查控制台查看详情');
+                alert('计算失败: ' + error.message);
             }
         });
+        
+        // 默认显示风火材料
+        document.getElementById('windFire-materials').style.display = 'grid';
     } catch (error) {
         console.error('初始化修为材料监听失败:', error);
     }
 };
-
 // 材料需求配置
 const MATERIAL_REQUIREMENTS = {
     windFire: {
@@ -970,38 +982,80 @@ const TRAINING_DROPS = {
 };
 
  const applyToTraining = (category, counts) => {
+    console.log('应用计算结果到历练:', category, counts);
+    
     const floors = [4, 6, 8, 10, 12];
     
     floors.forEach((floor, index) => {
         const count = counts[floor] || 0;
         if (count > 0) {
-            handleConsume(category, index, count);
+            // 直接更新状态
+            if (!state.training[category][index]) {
+                state.training[category][index] = {
+                    completed: 0,
+                    required: GAME_DATA.trainingPresets[state.training[category][index].tier][floor],
+                    userModified: false,
+                    tier: state.training[category][index].tier
+                };
+            }
+            
+            const trainingItem = state.training[category][index];
+            const oldCompleted = trainingItem.completed;
+            trainingItem.completed += count;
+            
+            // 记录操作历史
+            state.trainingHistory.push({
+                category,
+                index,
+                previousCount: oldCompleted,
+                count: count,
+                timestamp: new Date().toISOString()
+            });
         }
     });
     
-    // 更新显示
-    renderTraining();
-    saveData();
+    // 更新修为完成记录
+    [13, 15, 17].forEach(tier => {
+        const totalAvailable = checkTrainingCompletion(category, tier);
+        const alreadyCompleted = state.trainingCompletions[category][tier] || 0;
+        
+        if (totalAvailable > alreadyCompleted) {
+            state.trainingCompletions[category][tier] = totalAvailable;
+        }
+    });
+    
+    // 强制保存并重新渲染
+    updateAndSave();
 };
 // 计算并应用历练次数
 const calculateAndApply = () => {
-    console.log('开始计算修为材料...'); // 调试信息
+    console.log('开始计算修为材料...');
     
     const attribute = dom.cultivationAttribute.value;
     const tier = parseInt(dom.cultivationTier.value);
+    const category = attribute === 'yinYang' ? 'yinYang' : 
+                    attribute === 'windFire' ? 'windFire' : 'earthWater';
     
-    console.log(`属性: ${attribute}, 修为: ${tier}`); // 调试信息
+    console.log(`属性: ${attribute}, 修为: ${tier}, 对应历练类别: ${category}`);
     
     // 获取用户输入的材料数量
     const userMaterials = {};
-    document.querySelectorAll(`#${attribute}-materials input`).forEach(input => {
+    const materialContainer = document.getElementById(`${attribute}-materials`);
+    if (!materialContainer) {
+        console.error('找不到材料容器:', `${attribute}-materials`);
+        alert('错误：找不到对应的材料输入区域');
+        return;
+    }
+    
+    const materialInputs = materialContainer.querySelectorAll('input');
+    materialInputs.forEach(input => {
         userMaterials[input.dataset.material] = parseInt(input.value) || 0;
-        console.log(`${input.dataset.material}: ${userMaterials[input.dataset.material]}`); // 调试信息
+        console.log(`${input.dataset.material}: ${userMaterials[input.dataset.material]}`);
     });
 
     // 获取当前修为需求
     const requirements = JSON.parse(JSON.stringify(MATERIAL_REQUIREMENTS[attribute][tier]));
-    console.log('材料需求:', requirements); // 调试信息
+    console.log('材料需求:', requirements);
     
     // 计算各历练次数
     const trainingCounts = {4:0, 6:0, 8:0, 10:0, 12:0};
@@ -1039,12 +1093,17 @@ const calculateAndApply = () => {
         processTrainingLevel(4, 'tongJing', null);
     }
 
-    console.log('计算结果:', trainingCounts); // 调试信息
+    console.log('计算结果:', trainingCounts);
     
     // 应用计算结果
-    applyToTraining(attribute, trainingCounts);
+    applyToTraining(category, trainingCounts);
     
-    alert('计算完成，已自动应用历练次数！'); // 添加用户反馈
+    alert(`计算完成！已自动应用历练次数：
+    历练四: ${trainingCounts[4]}次
+    历练六: ${trainingCounts[6]}次
+    历练八: ${trainingCounts[8]}次
+    历练十: ${trainingCounts[10]}次
+    历练十二: ${trainingCounts[12]}次`);
 };
     // ==================== 工具函数 ====================
     /**
