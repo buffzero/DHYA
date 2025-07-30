@@ -1103,35 +1103,35 @@ const calculateAndApply = () => {
     // 1. 计算历练四（最低级材料）
     trainingCounts[4] = calculateTrainingCount(
         requirements, userMaterials, 4, 
-        TRAINING_RELATIONS[4][0] // 主材料（绢扇/铜镜/浊酒）
+        TRAINING_RELATIONS[4][0]
     );
     updateMaterialGaps(requirements, userMaterials, 4, trainingCounts[4]);
     
     // 2. 计算历练六
     trainingCounts[6] = calculateTrainingCount(
         requirements, userMaterials, 6, 
-        TRAINING_RELATIONS[6][0] // 主材料（翠扇/六博镜/清酒）
+        TRAINING_RELATIONS[6][0]
     );
     updateMaterialGaps(requirements, userMaterials, 6, trainingCounts[6]);
     
     // 3. 计算历练八
     trainingCounts[8] = calculateTrainingCount(
         requirements, userMaterials, 8, 
-        TRAINING_RELATIONS[8][0] // 主材料（金丝扇/鎏金镜/百末旨酒）
+        TRAINING_RELATIONS[8][0]
     );
     updateMaterialGaps(requirements, userMaterials, 8, trainingCounts[8]);
     
     // 4. 计算历练十
     trainingCounts[10] = calculateTrainingCount(
         requirements, userMaterials, 10, 
-        TRAINING_RELATIONS[10][0] // 主材料（羽扇/宝石镜/灵山泉）
+        TRAINING_RELATIONS[10][0]
     );
     updateMaterialGaps(requirements, userMaterials, 10, trainingCounts[10]);
     
     // 5. 计算历练十二（最高级材料）
     trainingCounts[12] = calculateTrainingCount(
         requirements, userMaterials, 12, 
-        TRAINING_RELATIONS[12][0] // 主材料（仙门扇/水镜/霸王泪）
+        TRAINING_RELATIONS[12][0]
     );
     updateMaterialGaps(requirements, userMaterials, 12, trainingCounts[12]);
     
@@ -1139,27 +1139,35 @@ const calculateAndApply = () => {
     if (requirements[TRAINING_RELATIONS[12][1]] > 0) {
         const additionalCount = calculateTrainingCount(
             requirements, userMaterials, 12, 
-            TRAINING_RELATIONS[12][1] // 副材料（悲回风扇/星汉镜/木兰坠露）
+            TRAINING_RELATIONS[12][1]
         );
         trainingCounts[12] += additionalCount;
         updateMaterialGaps(requirements, userMaterials, 12, additionalCount);
     }
     
-    // 询问用户是否要应用计算结果
-    const confirmApply = confirm(`计算结果：
+    // 将计算结果填入历练输入框
+    const floors = [4, 6, 8, 10, 12];
+    floors.forEach((floor, index) => {
+        const input = document.querySelector(`.training-count-input[data-category="${category}"][data-index="${index}"]`);
+        if (input) {
+            const count = trainingCounts[floor];
+            input.value = count > 0 ? count : '';
+            
+            // 触发change事件以更新状态
+            const event = new Event('change');
+            input.dispatchEvent(event);
+        }
+    });
+    
+    // 显示计算结果
+    alert(`计算结果已填入${getCategoryName(category)}历练的输入框：
       历练四: ${trainingCounts[4]}次
       历练六: ${trainingCounts[6]}次
       历练八: ${trainingCounts[8]}次
       历练十: ${trainingCounts[10]}次
       历练十二: ${trainingCounts[12]}次
       
-      是否要将这些次数应用到${getCategoryName(category)}历练中？`);
-    
-    if (confirmApply) {
-        // 应用计算结果到历练
-        applyToTraining(category, trainingCounts);
-        alert('已成功应用计算结果！');
-    }
+      请检查并手动核销！`);
 };
     // ==================== 工具函数 ====================
     /**
