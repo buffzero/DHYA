@@ -515,33 +515,31 @@ const ResourceTracker = (() => {
                 </div>
             </div>
         </div>
-        ${state.training[category].map((trainingItem, index) => {
-            // 获取当前历练的配置数据
+       ${state.training[category].map((trainingItem, index) => {
             const trainingConfig = GAME_DATA.training[category][index];
             const floor = floors[index];
             
-            // 确定需要的次数（优先使用用户修改的值）
-            const required = trainingItem.userModified ? 
-                trainingItem.required : 
-                GAME_DATA.trainingPresets[trainingItem.tier][floor];
-                
+            // 获取基础需求次数
+            const baseRequired = GAME_DATA.trainingPresets[trainingItem.tier][floor];
+            
+            // 确定显示的需求次数（优先使用计算结果，其次用用户修改值，最后用预设值）
+            const displayRequired = trainingItem.calculatedCount !== undefined ? 
+                trainingItem.calculatedCount : 
+                (trainingItem.userModified ? trainingItem.required : baseRequired);
+            
             const completed = trainingItem.completed || 0;
-            const calculatedCount = trainingItem.calculatedCount || 0;
             
-            // 确定显示的需求次数
-            const displayRequired = calculatedCount > 0 ? calculatedCount : required;
-            
-            // 计算剩余次数（关键修复点）
-            const remaining = Math.max(0, displayRequired - completed);
-            
-            // 判断是否满足条件
+            // 判断是否满足条件（计算结果为0或已完成次数≥需求次数）
             const isMet = displayRequired === 0 || completed >= displayRequired;
             const displayStatus = isMet ? '已满足' : `${completed}/${displayRequired}`;
-         
+            
+            // 计算剩余次数（仅在未满足时计算）
+            const remaining = isMet ? 0 : Math.max(0, displayRequired - completed);
+            
             return `
                 <div class="training-item">
                     <div class="training-header">
-                        <div class="training-name">${trainingConfig.name}</div>  <!-- 使用trainingConfig.name -->
+                        <div class="training-name">${trainingConfig.name}</div>
                         <div class="training-input-status">
                             <input type="text"
                                 class="training-count-input" 
@@ -554,51 +552,50 @@ const ResourceTracker = (() => {
                         </div>
                     </div>
                     ${!isMet && displayRequired > 0 ? renderCircles(displayRequired, completed) : ''}
-                        <div class="training-actions">
-                            <button class="consume-btn" 
-                                data-category="${category}" 
-                                data-index="${index}" 
-                                data-count="1"
-                                ${isMet ? 'disabled' : ''}>
-                                核销一次
-                            </button>
-                            <button class="consume-btn" 
-                                data-category="${category}" 
-                                data-index="${index}" 
-                                data-count="3"
-                                ${isMet || remaining < 3 ? 'disabled' : ''}>
-                                核销三次
-                            </button>
-                            <button class="consume-btn" 
-                                data-category="${category}" 
-                                data-index="${index}" 
-                                data-count="6"
-                                ${isMet || remaining < 6 ? 'disabled' : ''}>
-                                核销六次
-                            </button>
-                            <button class="consume-btn custom-consume" 
-                                data-category="${category}" 
-                                data-index="${index}">
-                                核销指定次数
-                            </button>
-                            <input type="number" min="1" max="${remaining}" 
-                                class="custom-consume-input" 
-                                data-category="${category}" 
-                                data-index="${index}"
-                                placeholder="次数">
-                            <button class="undo-btn" 
-                                data-category="${category}" 
-                                data-index="${index}"
-                                ${completed <= 0 ? 'disabled' : ''}>
-                                撤销
-                            </button>
-                        </div>
+                    <div class="training-actions">
+                        <button class="consume-btn" 
+                            data-category="${category}" 
+                            data-index="${index}" 
+                            data-count="1"
+                            ${isMet ? 'disabled' : ''}>
+                            核销一次
+                        </button>
+                        <button class="consume-btn" 
+                            data-category="${category}" 
+                            data-index="${index}" 
+                            data-count="3"
+                            ${isMet || remaining < 3 ? 'disabled' : ''}>
+                            核销三次
+                        </button>
+                        <button class="consume-btn" 
+                            data-category="${category}" 
+                            data-index="${index}" 
+                            data-count="6"
+                            ${isMet || remaining < 6 ? 'disabled' : ''}>
+                            核销六次
+                        </button>
+                        <button class="consume-btn custom-consume" 
+                            data-category="${category}" 
+                            data-index="${index}">
+                            核销指定次数
+                        </button>
+                        <input type="number" min="1" max="${remaining}" 
+                            class="custom-consume-input" 
+                            data-category="${category}" 
+                            data-index="${index}"
+                            placeholder="次数">
+                        <button class="undo-btn" 
+                            data-category="${category}" 
+                            data-index="${index}"
+                            ${completed <= 0 ? 'disabled' : ''}>
+                            撤销
+                        </button>
                     </div>
-                `;
-            }).join('')}
-        `;
-    };
-
+                </div>
+            `;
+        }).join('')}
+    `;
+};
     // 渲染圆圈进度
    const renderCircles = (required, completed) => {
     if (required <= 0) return ''; // 计算结果为0时不显示圆圈
@@ -1165,16 +1162,24 @@ const calculateAndApply = () => {
     // 将计算结果存储在状态中
     const floors = [4, 6, 8, 10, 12];
     floors.forEach((floor, index) => {
+        // 确保存在对应的历练项
         if (!state.training[category][index]) {
             state.training[category][index] = {
                 completed: 0,
-                required: GAME_DATA.trainingPresets[state.training[category][index].tier][floor],
+                required: GAME_DATA.trainingPresets[tier][floor],
                 userModified: false,
-                tier: state.training[category][index].tier
+                tier: tier
             };
         }
-        // 明确存储计算结果，即使是0
-        state.training[category][index].calculatedCount = trainingCounts[floor];
+        
+        // 明确存储计算结果（包括0）
+        state.training[category][index].calculatedCount = trainingCounts[floor] || 0;
+        
+        // 如果计算结果为0，自动标记为已完成
+        if (trainingCounts[floor] === 0) {
+            state.training[category][index].completed = 
+                Math.max(state.training[category][index].completed, 0);
+        }
     });
 
     renderTraining();
