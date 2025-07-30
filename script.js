@@ -1068,7 +1068,6 @@ const applyToTraining = (category, counts) => {
     updateAndSave();
 };
 
-
 // 计算并应用历练次数
 const calculateAndApply = () => {
     console.log('开始计算修为材料...');
@@ -1146,18 +1145,18 @@ const calculateAndApply = () => {
         updateMaterialGaps(requirements, userMaterials, 12, additionalCount);
     }
     
-    // 应用计算结果到历练进度
-    applyToTraining(category, trainingCounts);
-    
-    // 显示结果
-    alert(`计算完成！已自动应用历练次数：
+    // 只显示结果，不自动核销
+    const resultMessage = `计算结果：
       历练四: ${trainingCounts[4]}次
       历练六: ${trainingCounts[6]}次
       历练八: ${trainingCounts[8]}次
       历练十: ${trainingCounts[10]}次
-      历练十二: ${trainingCounts[12]}次`);
+      历练十二: ${trainingCounts[12]}次
+      
+      注意：这只是计算结果，不会自动核销次数。请根据结果手动核销。`;
+    
+    alert(resultMessage);
 };
-
     // ==================== 工具函数 ====================
     /**
  * 兼容旧版数据迁移
