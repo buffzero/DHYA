@@ -40,6 +40,39 @@ const ResourceTracker = (() => {
 
     // ==================== 游戏数据 ====================
     const GAME_DATA = {
+        // 历练层数与材料关系（按属性分类）
+trainingRelations: {
+    windFire: {
+        4: ['juanShan', 'cuiShan'],
+        6: ['cuiShan', 'jinShan'],
+        8: ['jinShan', 'yuShan'],
+        10: ['yuShan', 'xianShan'],
+        12: ['xianShan', 'beiShan']
+    },
+    yinYang: {
+        4: ['tongJing', 'liuJing'],
+        6: ['liuJing', 'liuJinJing'],
+        8: ['liuJinJing', 'baoShiJing'],
+        10: ['baoShiJing', 'shuiJing'],
+        12: ['shuiJing', 'xingHanJing']
+    },
+    earthWater: {
+        4: ['zhuoJiu', 'qingJiu'],
+        6: ['qingJiu', 'baiJiu'],
+        8: ['baiJiu', 'lingQuan'],
+        10: ['lingQuan', 'baWangLei'],
+        12: ['baWangLei', 'muLan']
+    }
+},
+
+// 历练层数材料掉落配置
+trainingMaterialDrops: {
+    4: [30, 20],  // 历练4：主要材料×30，次要材料×20
+    6: [40, 30],  // 历练6：主要材料×40，次要材料×30
+    8: [45, 35],  // 历练8：主要材料×45，次要材料×35
+    10: [50, 40], // 历练10：主要材料×50，次要材料×40
+    12: [60, 45]  // 历练12：主要材料×60，次要材料×45
+},
         // 职业列表
         classes: ['诡道', '神纪', '岐黄', '龙盾', '破军'],
         
@@ -975,7 +1008,6 @@ const MATERIAL_REQUIREMENTS = {
         17: { zhuoJiu: 180, qingJiu: 570, baiJiu: 1440, lingQuan: 2550, baWangLei: 3420, muLan: 2100 }
     }
 };
-
 // 历练层数与材料关系
 const TRAINING_RELATIONS = {
     4: ['juanShan', 'cuiShan', 'tongJing', 'liuJing', 'zhuoJiu', 'qingJiu'],
@@ -1046,18 +1078,11 @@ const calculateAndApply = () => {
     
     const attribute = dom.cultivationAttribute.value;
     const tier = parseInt(dom.cultivationTier.value);
-    const category = attribute === 'yinYang' ? 'yinYang' : 
-                    attribute === 'windFire' ? 'windFire' : 'earthWater';
+    const category = attribute;
     
     // 获取用户输入的材料数量
     const userMaterials = {};
     const materialContainer = document.getElementById(`${attribute}-materials`);
-    if (!materialContainer) {
-        console.error('找不到材料容器:', `${attribute}-materials`);
-        alert('错误：找不到对应的材料输入区域');
-        return;
-    }
-    
     const materialInputs = materialContainer.querySelectorAll('input');
     materialInputs.forEach(input => {
         userMaterials[input.dataset.material] = parseInt(input.value) || 0;
@@ -1066,36 +1091,51 @@ const calculateAndApply = () => {
     // 获取当前修为需求
     const requirements = JSON.parse(JSON.stringify(MATERIAL_REQUIREMENTS[attribute][tier]));
     
-    // 计算各历练次数
-    const trainingCounts = {4:0, 6:0, 8:0, 10:0, 12:0};
+    // 初始化当前材料数量
+    const currentMaterials = {...userMaterials};
     
-    // 修复计算逻辑 - 使用实际缺口计算
-    const processTrainingLevel = (level, primaryMat) => {
-        // 计算实际缺口 = 需求 - 已有材料
-        const gap = requirements[primaryMat] - userMaterials[primaryMat];
-        if (gap <= 0) return 0;
+    // 存储各层历练次数
+    const trainingCounts = {4: 0, 6: 0, 8: 0, 10: 0, 12: 0};
+    
+    // 按历练层级从低到高计算
+    const levels = [4, 6, 8, 10, 12];
+    levels.forEach(level => {
+        // 获取当前层级的材料关系
+        const mats = GAME_DATA.trainingRelations[category][level];
+        const mat1 = mats[0];
+        const mat2 = mats[1];
         
-        // 计算需要刷的次数 = 缺口 / 每次掉落数量
-        const count = Math.ceil(gap / TRAINING_DROPS[level]);
+        // 获取材料掉落配置
+        const drops = GAME_DATA.trainingMaterialDrops[level];
+        const drop1 = drops[0];
+        const drop2 = drops[1];
+        
+        // 计算材料缺口
+        const gap1 = Math.max(0, requirements[mat1] - currentMaterials[mat1]);
+        const gap2 = Math.max(0, requirements[mat2] - currentMaterials[mat2]);
+        
+        // 计算需要刷的次数（取两种材料中需求最大的）
+        let count = 0;
+        if (gap1 > 0 || gap2 > 0) {
+            const count1 = Math.ceil(gap1 / drop1);
+            const count2 = Math.ceil(gap2 / drop2);
+            count = Math.max(count1, count2);
+        }
+        
+        // 记录历练次数
         trainingCounts[level] = count;
-        return count;
-    };
-
-    // 重新组织计算顺序
-    if (tier === 17) {
-        if (requirements.xingHanJing > 0) processTrainingLevel(12, 'xingHanJing');
-        if (requirements.shuiJing > 0) processTrainingLevel(10, 'shuiJing');
-    } else if (tier === 15) {
-        if (requirements.shuiJing > 0) processTrainingLevel(10, 'shuiJing');
-    }
+        
+        // 更新材料库存（刷历练获得的材料）
+        if (count > 0) {
+            currentMaterials[mat1] += count * drop1;
+            currentMaterials[mat2] += count * drop2;
+        }
+    });
     
-    if (requirements.liuJinJing > 0) processTrainingLevel(8, 'liuJinJing');
-    if (requirements.liuJing > 0) processTrainingLevel(6, 'liuJing');
-    if (requirements.tongJing > 0) processTrainingLevel(4, 'tongJing');
-
     // 应用计算结果
     applyToTraining(category, trainingCounts);
     
+    // 显示计算结果
     alert(`计算完成！已自动应用历练次数：
     历练四: ${trainingCounts[4]}次
     历练六: ${trainingCounts[6]}次
