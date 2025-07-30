@@ -478,46 +478,49 @@ const ResourceTracker = (() => {
     const floors = [4, 6, 8, 10, 12];
     const categoryName = getCategoryName(category);
     
-        // 生成修为徽章（显示已完成+可完成次数）
-        const completionBadges = [13, 15, 17].map(tier => {
-            const completed = state.trainingCompletions[category][tier] || 0;
-            const available = checkTrainingCompletion(category, tier) - completed;
-            
-            if (completed > 0 || available > 0) {
-                return `
-                    <span class="completion-badge tier-${tier} 
-                          ${available > 0 ? 'available' : ''}"
-                          title="${categoryName}·修为${tier}：
-                          已完成 ${completed}次
-                          ${available > 0 ? `可领取 +${available}次` : ''}">
-                        ${tier}: ${completed}${available > 0 ? `(+${available})` : ''}
-                    </span>
-                `;
-            }
-            return '';
-        }).filter(Boolean).join('');
+    // 生成修为徽章（显示已完成+可完成次数） - 这部分不需要修改
+    const completionBadges = [13, 15, 17].map(tier => {
+        const completed = state.trainingCompletions[category][tier] || 0;
+        const available = checkTrainingCompletion(category, tier) - completed;
+        
+        if (completed > 0 || available > 0) {
+            return `
+                <span class="completion-badge tier-${tier} 
+                      ${available > 0 ? 'available' : ''}"
+                      title="${categoryName}·修为${tier}：
+                      已完成 ${completed}次
+                      ${available > 0 ? `可领取 +${available}次` : ''}">
+                    ${tier}: ${completed}${available > 0 ? `(+${available})` : ''}
+                </span>
+            `;
+        }
+        return '';
+    }).filter(Boolean).join('');
 
-        container.innerHTML = `
-            <div class="training-category-title">
-              <div class="category-name">${categoryName}</div>
-                <div class="title-controls-container">
-                  <div class="completion-badges">${completionBadges}</div>
-                    <div class="training-controls">
-                        <select class="tier-select" data-category="${category}">
-                            ${[13, 15, 17].map(tier => `
-                                <option value="${tier}" 
-                                    ${state.training[category][0].tier === tier ? 'selected' : ''}>
-                                    修为${tier}
-                                </option>
-                            `).join('')}
-                        </select>
-                        <button class="reset-category-btn" data-category="${category}">一键撤销</button>
-                    </div>
+    container.innerHTML = `
+        <div class="training-category-title">
+          <div class="category-name">${categoryName}</div>
+            <div class="title-controls-container">
+              <div class="completion-badges">${completionBadges}</div>
+                <div class="training-controls">
+                    <select class="tier-select" data-category="${category}">
+                        ${[13, 15, 17].map(tier => `
+                            <option value="${tier}" 
+                                ${state.training[category][0].tier === tier ? 'selected' : ''}>
+                                修为${tier}
+                            </option>
+                        `).join('')}
+                    </select>
+                    <button class="reset-category-btn" data-category="${category}">一键撤销</button>
                 </div>
             </div>
-             ${state.training[category].map((trainingItem, index) => {
+        </div>
+        ${state.training[category].map((trainingItem, index) => {
+            // 获取当前历练的配置数据
+            const trainingConfig = GAME_DATA.training[category][index];
             const floor = floors[index];
-            // 确保使用正确的required值
+            
+            // 确定需要的次数（优先使用用户修改的值）
             const required = trainingItem.userModified ? 
                 trainingItem.required : 
                 GAME_DATA.trainingPresets[trainingItem.tier][floor];
@@ -530,24 +533,25 @@ const ResourceTracker = (() => {
             const displayRequired = showCalculated ? calculatedCount : required;
             
             // 判断是否满足条件
-            const isMet = completed >= displayRequired;
-              
+            const isMet = displayRequired === 0 || completed >= displayRequired;
+            const displayStatus = isMet ? '已满足' : `${completed}/${displayRequired}`;
+            
             return `
                 <div class="training-item">
                     <div class="training-header">
-                        <div class="training-name">${gameItem.name}</div>
+                        <div class="training-name">${trainingConfig.name}</div>  <!-- 使用trainingConfig.name -->
                         <div class="training-input-status">
                             <input type="text"
                                 class="training-count-input" 
                                 data-category="${category}" 
                                 data-index="${index}"
-                                value="${calculatedCount === 0 ? 0 : displayRequired}">
+                                value="${displayRequired}">
                             <div class="sub-status-indicator ${isMet ? 'met' : 'not-met'}">
                                 ${displayStatus}
                             </div>
                         </div>
                     </div>
-                    ${!isMet ? renderCircles(displayRequired, completed) : ''}
+                    ${!isMet && displayRequired > 0 ? renderCircles(displayRequired, completed) : ''}
                         <div class="training-actions">
                             <button class="consume-btn" 
                                 data-category="${category}" 
