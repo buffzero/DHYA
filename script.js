@@ -199,7 +199,7 @@ const ResourceTracker = (() => {
     const init = () => {
         console.log('🚀 密探资源系统启动...');
         try {
-            setupDOM();
+        setupDOM();
         loadData();
         renderAll();
         updateMaterialInputsVisibility(); 
@@ -959,13 +959,10 @@ const updateMaterialInputsVisibility = () => {
         target.style.display = 'grid';
     }
 };
-        
-        // 默认显示风火材料
-        document.getElementById('windFire-materials').style.display = 'grid';
-    } catch (error) {
-        console.error('初始化修为材料监听失败:', error);
-    }
-};
+
+// 默认显示风火材料（独立代码，不属于任何函数）
+document.getElementById('windFire-materials').style.display = 'grid';
+ 
 // 材料需求配置
 const MATERIAL_REQUIREMENTS = {
   windFire: {
@@ -1067,6 +1064,51 @@ const updateGaps = (requirements, level, count) => {
     // 强制保存并重新渲染
     updateAndSave();
 };
+
+    // 处理单层历练计算
+const processTrainingLevel = (requirements, userMaterials, level, primaryMat) => {
+  const gap = requirements[primaryMat] - (userMaterials[primaryMat] || 0);
+  if (gap <= 0) return 0;
+  
+  let count = Math.ceil(gap / TRAINING_DROPS[level]);
+  if (count > TRAINING_LIMITS[level]) {
+    console.warn(`计算次数超过上限: 历练${level}层计算${count}次，上限${TRAINING_LIMITS[level]}次`);
+    count = TRAINING_LIMITS[level];
+  }
+  return count;
+};
+
+// 更新材料缺口
+const updateGaps = (requirements, level, count) => {
+  const materials = TRAINING_RELATIONS[level];
+  materials.forEach(mat => {
+    if (requirements[mat]) {
+      requirements[mat] = Math.max(0, requirements[mat] - count * TRAINING_DROPS[level]);
+    }
+  });
+};
+
+// 应用到历练进度
+const applyToTraining = (category, counts) => {
+  const floors = [4, 6, 8, 10, 12];
+  floors.forEach((floor, index) => {
+    const count = counts[floor] || 0;
+    if (count > 0) {
+      const trainingItem = state.training[category][index];
+      const oldCompleted = trainingItem.completed;
+      trainingItem.completed += count;
+      
+      state.trainingHistory.push({
+        category,
+        index,
+        previousCount: oldCompleted,
+        count,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+  updateAndSave();
+};
 // 计算并应用历练次数
 const calculateAndApply = () => {
     console.log('开始计算修为材料...');
@@ -1090,107 +1132,62 @@ const calculateAndApply = () => {
         userMaterials[input.dataset.material] = parseInt(input.value) || 0;
     });
 
-    // 获取当前修为需求
-    const requirements = JSON.parse(JSON.stringify(MATERIAL_REQUIREMENTS[attribute][tier]));
-    
-    // 计算各历练次数
+    // 获取当前修为需求配置
+    const requirements = JSON.parse(JSON.stringify(
+        MATERIAL_REQUIREMENTS[attribute][tier]
+    ));
+
+    // 计算各层历练次数
     const trainingCounts = {4:0, 6:0, 8:0, 10:0, 12:0};
     
-    // 处理单层历练计算
-// 处理单层历练计算
-const processTrainingLevel = (requirements, userMaterials, level, primaryMat) => {
-  const gap = requirements[primaryMat] - (userMaterials[primaryMat] || 0);
-  if (gap <= 0) return 0;
-  
-  let count = Math.ceil(gap / TRAINING_DROPS[level]);
-  
-  // 添加上限检查
-  if (count > TRAINING_LIMITS[level]) {
-    console.warn(`计算次数超过上限: 历练${level}层计算${count}次，上限${TRAINING_LIMITS[level]}次`);
-    count = TRAINING_LIMITS[level];
-  }
-  
-  return count;
+    // 从最高层开始计算（12层 → 4层）
+    trainingCounts[12] = processTrainingLevel(
+        requirements, userMaterials, 12, 
+        attribute === 'yinYang' ? 'xingHanJing' : 
+        attribute === 'windFire' ? 'beiShan' : 'muLan'
+    );
+    updateGaps(requirements, 12, trainingCounts[12]);
+    
+    trainingCounts[10] = processTrainingLevel(
+        requirements, userMaterials, 10,
+        attribute === 'yinYang' ? 'shuiJing' : 
+        attribute === 'windFire' ? 'xianShan' : 'baWangLei'
+    );
+    updateGaps(requirements, 10, trainingCounts[10]);
+    
+    trainingCounts[8] = processTrainingLevel(
+        requirements, userMaterials, 8,
+        attribute === 'yinYang' ? 'baoShiJing' : 
+        attribute === 'windFire' ? 'yuShan' : 'lingQuan'
+    );
+    updateGaps(requirements, 8, trainingCounts[8]);
+    
+    trainingCounts[6] = processTrainingLevel(
+        requirements, userMaterials, 6,
+        attribute === 'yinYang' ? 'liuJing' : 
+        attribute === 'windFire' ? 'jinShan' : 'baiJiu'
+    );
+    updateGaps(requirements, 6, trainingCounts[6]);
+    
+    trainingCounts[4] = processTrainingLevel(
+        requirements, userMaterials, 4,
+        attribute === 'yinYang' ? 'tongJing' : 
+        attribute === 'windFire' ? 'juanShan' : 'zhuoJiu'
+    );
+    updateGaps(requirements, 4, trainingCounts[4]);
+    
+    // 应用计算结果到历练进度
+    applyToTraining(category, trainingCounts);
+    
+    // 显示结果
+    alert(`计算完成！已自动应用历练次数：
+      历练四: ${trainingCounts[4]}次
+      历练六: ${trainingCounts[6]}次
+      历练八: ${trainingCounts[8]}次
+      历练十: ${trainingCounts[10]}次
+      历练十二: ${trainingCounts[12]}次`);
 };
 
-// 计算并应用
-const calculateAndApply = () => {
-  console.log('开始计算修为材料...');
-  
-  const attribute = dom.cultivationAttribute.value;
-  const tier = parseInt(dom.cultivationTier.value);
-  const category = attribute === 'yinYang' ? 'yinYang' : 
-                  attribute === 'windFire' ? 'windFire' : 'earthWater';
-  
-  // 获取用户输入
-  const userMaterials = {};
-  const materialContainer = document.getElementById(`${attribute}-materials`);
-  if (!materialContainer) {
-    console.error('找不到材料容器:', `${attribute}-materials`);
-    alert('错误：找不到对应的材料输入区域');
-    return;
-  }
-  
-  const materialInputs = materialContainer.querySelectorAll('input');
-  materialInputs.forEach(input => {
-    userMaterials[input.dataset.material] = parseInt(input.value) || 0;
-  });
-
-  // 获取材料需求
-  const requirements = JSON.parse(JSON.stringify(
-    MATERIAL_REQUIREMENTS[attribute][tier]
-  ));
-
-  // 计算各历练次数
-  const trainingCounts = {4:0, 6:0, 8:0, 10:0, 12:0};
-  
-  // 从最高层开始计算
-  trainingCounts[12] = processTrainingLevel(
-    requirements, userMaterials, 12, 
-    attribute === 'yinYang' ? 'xingHanJing' : 
-    attribute === 'windFire' ? 'beiShan' : 'muLan'
-  );
-  updateGaps(requirements, 12, trainingCounts[12]);
-  
-  trainingCounts[10] = processTrainingLevel(
-    requirements, userMaterials, 10,
-    attribute === 'yinYang' ? 'shuiJing' : 
-    attribute === 'windFire' ? 'xianShan' : 'baWangLei'
-  );
-  updateGaps(requirements, 10, trainingCounts[10]);
-  
-  trainingCounts[8] = processTrainingLevel(
-    requirements, userMaterials, 8,
-    attribute === 'yinYang' ? 'baoShiJing' : 
-    attribute === 'windFire' ? 'yuShan' : 'lingQuan'
-  );
-  updateGaps(requirements, 8, trainingCounts[8]);
-  
-  trainingCounts[6] = processTrainingLevel(
-    requirements, userMaterials, 6,
-    attribute === 'yinYang' ? 'liuJing' : 
-    attribute === 'windFire' ? 'jinShan' : 'baiJiu'
-  );
-  updateGaps(requirements, 6, trainingCounts[6]);
-  
-  trainingCounts[4] = processTrainingLevel(
-    requirements, userMaterials, 4,
-    attribute === 'yinYang' ? 'tongJing' : 
-    attribute === 'windFire' ? 'juanShan' : 'zhuoJiu'
-  );
-  updateGaps(requirements, 4, trainingCounts[4]);
-  
-  // 应用计算结果
-  applyToTraining(category, trainingCounts);
-  
-  // 显示结果
-  alert(`计算完成！已自动应用历练次数：
-    历练四: ${trainingCounts[4]}次
-    历练六: ${trainingCounts[6]}次
-    历练八: ${trainingCounts[8]}次
-    历练十: ${trainingCounts[10]}次
-    历练十二: ${trainingCounts[12]}次`);
-};
     // ==================== 工具函数 ====================
     /**
  * 兼容旧版数据迁移
