@@ -919,21 +919,8 @@ const ResourceTracker = (() => {
             }
         });
     };
-
-          // 更新材料输入区域可见性
-const updateMaterialInputsVisibility = () => {
-    const attribute = dom.cultivationAttribute.value;
-    document.querySelectorAll('.material-inputs').forEach(el => {
-        el.style.display = 'none';
-    });
-    const target = document.getElementById(`${attribute}-materials`);
-    if (target) {
-        target.style.display = 'grid';
-    }
-};
  
-// 新增函数：设置修为材料事件监听
-const setupCultivationListeners = () => {
+    const setupCultivationListeners = () => {
     try {
         // 确保DOM元素已加载
         if (!dom.cultivationAttribute || !dom.cultivationTier || !dom.calculateCultivation) {
@@ -941,27 +928,26 @@ const setupCultivationListeners = () => {
             return;
         }
 
-        // 初始渲染材料输入区域
+        // 初始显示风火材料（通过统一函数管理）
         updateMaterialInputsVisibility();
 
-        // 属性切换显示对应材料
+        // 事件监听
         dom.cultivationAttribute.addEventListener('change', updateMaterialInputsVisibility);
-        
-        // 计算并应用按钮
         dom.calculateCultivation.addEventListener('click', calculateAndApply);
-        
-        // 默认显示风火材料
-        document.getElementById('windFire-materials').style.display = 'grid';
-        document.getElementById('yinYang-materials').style.display = 'none';
-        document.getElementById('earthWater-materials').style.display = 'none';
     } catch (error) {
         console.error('初始化修为材料监听失败:', error);
     }
 };
+          // ==================== 工具函数 ====================
+const updateMaterialInputsVisibility = () => {
+    const attribute = dom.cultivationAttribute.value;
+    document.querySelectorAll('.material-inputs').forEach(el => {
+        el.style.display = 'none';
+    });
+    const target = document.getElementById(`${attribute}-materials`);
+    if (target) target.style.display = 'grid';
+};
 
-
-
- 
 // 材料需求配置
 const MATERIAL_REQUIREMENTS = {
   windFire: {
@@ -1077,27 +1063,7 @@ const processTrainingLevel = (requirements, userMaterials, level, primaryMat) =>
   return count;
 };
 
-// 应用到历练进度
-const applyToTraining = (category, counts) => {
-  const floors = [4, 6, 8, 10, 12];
-  floors.forEach((floor, index) => {
-    const count = counts[floor] || 0;
-    if (count > 0) {
-      const trainingItem = state.training[category][index];
-      const oldCompleted = trainingItem.completed;
-      trainingItem.completed += count;
-      
-      state.trainingHistory.push({
-        category,
-        index,
-        previousCount: oldCompleted,
-        count,
-        timestamp: new Date().toISOString()
-      });
-    }
-  });
-  updateAndSave();
-};
+
 // 计算并应用历练次数
 const calculateAndApply = () => {
     console.log('开始计算修为材料...');
