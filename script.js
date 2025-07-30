@@ -1021,6 +1021,7 @@ const updateMaterialGaps = (requirements, userMaterials, level, count) => {
 };
 
  // 应用计算结果到历练
+// 应用计算结果到历练
 const applyToTraining = (category, counts) => {
     console.log('应用计算结果到历练:', category, counts);
     
@@ -1068,7 +1069,6 @@ const applyToTraining = (category, counts) => {
     updateAndSave();
 };
 
-// 计算并应用历练次数
 const calculateAndApply = () => {
     console.log('开始计算修为材料...');
     
@@ -1145,17 +1145,21 @@ const calculateAndApply = () => {
         updateMaterialGaps(requirements, userMaterials, 12, additionalCount);
     }
     
-    // 只显示结果，不自动核销
-    const resultMessage = `计算结果：
+    // 询问用户是否要应用计算结果
+    const confirmApply = confirm(`计算结果：
       历练四: ${trainingCounts[4]}次
       历练六: ${trainingCounts[6]}次
       历练八: ${trainingCounts[8]}次
       历练十: ${trainingCounts[10]}次
       历练十二: ${trainingCounts[12]}次
       
-      注意：这只是计算结果，不会自动核销次数。请根据结果手动核销。`;
+      是否要将这些次数应用到${getCategoryName(category)}历练中？`);
     
-    alert(resultMessage);
+    if (confirmApply) {
+        // 应用计算结果到历练
+        applyToTraining(category, trainingCounts);
+        alert('已成功应用计算结果！');
+    }
 };
     // ==================== 工具函数 ====================
     /**
