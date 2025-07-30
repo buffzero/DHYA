@@ -473,9 +473,9 @@ const ResourceTracker = (() => {
 
     // 渲染单个历练类别
    const renderTrainingCategory = (category, container) => {
-        const floors = [4, 6, 8, 10, 12];
-        const categoryName = getCategoryName(category);
-        
+    const floors = [4, 6, 8, 10, 12];
+    const categoryName = getCategoryName(category);
+    
         // 生成修为徽章（显示已完成+可完成次数）
         const completionBadges = [13, 15, 17].map(tier => {
             const completed = state.trainingCompletions[category][tier] || 0;
@@ -497,9 +497,9 @@ const ResourceTracker = (() => {
 
         container.innerHTML = `
             <div class="training-category-title">
-                <div class="category-name">${categoryName}</div>
+              <div class="category-name">${categoryName}</div>
                 <div class="title-controls-container">
-                    <div class="completion-badges">${completionBadges}</div>
+                  <div class="completion-badges">${completionBadges}</div>
                     <div class="training-controls">
                         <select class="tier-select" data-category="${category}">
                             ${[13, 15, 17].map(tier => `
@@ -514,35 +514,40 @@ const ResourceTracker = (() => {
                 </div>
             </div>
             ${state.training[category].map((trainingItem, index) => {
-                const gameItem = GAME_DATA.training[category][index];
-                const floor = floors[index];
+            const gameItem = GAME_DATA.training[category][index];
+            const floor = floors[index];
+            
+            const required = trainingItem.userModified ?
+                trainingItem.required :
+                GAME_DATA.trainingPresets[trainingItem.tier][floor];
                 
-                const required = trainingItem.userModified ?
-                    trainingItem.required :
-                    GAME_DATA.trainingPresets[trainingItem.tier][floor];
-                    
-                const completed = trainingItem.completed || 0;
-                const isMet = completed >= required;
-                const remaining = required - completed;
-                
-                return `
-                    <div class="training-item">
-                        <div class="training-header">
-                            <div class="training-name">${gameItem.name}</div>
-                            <div class="training-input-status">
-                                <input type="text"
-                                    inputmode="numeric"
-                                    class="training-count-input" 
-                                    data-category="${category}" 
-                                    data-index="${index}"
-                                    value="${required}"
-                                    onfocus="this.value=''; setTimeout(() => this.select(), 10)">
-                                <div class="sub-status-indicator ${isMet ? 'met' : 'not-met'}">
-                                    ${isMet ? '已满足' : `${completed}/${required}`}
-                                </div>
+            const completed = trainingItem.completed || 0;
+            const isMet = completed >= required;
+            
+            // 新：获取计算结果（如果有）
+            const calculatedCount = trainingItem.calculatedCount || 0;
+            const showCalculated = calculatedCount > 0 && !isMet;
+            const displayRequired = showCalculated ? calculatedCount : required;
+            const displayStatus = isMet ? '已满足' : `${completed}/${displayRequired}`;
+
+            return `
+                <div class="training-item">
+                    <div class="training-header">
+                        <div class="training-name">${gameItem.name}</div>
+                        <div class="training-input-status">
+                            <input type="text"
+                                inputmode="numeric"
+                                class="training-count-input" 
+                                data-category="${category}" 
+                                data-index="${index}"
+                                value="${displayRequired}"
+                                onfocus="this.value=''; setTimeout(() => this.select(), 10)">
+                            <div class="sub-status-indicator ${isMet ? 'met' : 'not-met'}">
+                                ${displayStatus}
                             </div>
                         </div>
-                        ${required > 0 ? renderCircles(required, completed) : ''}
+                    </div>
+                    ${!isMet ? renderCircles(displayRequired, completed) : ''}
                         <div class="training-actions">
                             <button class="consume-btn" 
                                 data-category="${category}" 
@@ -589,19 +594,22 @@ const ResourceTracker = (() => {
     };
 
     // 渲染圆圈进度
-    const renderCircles = (required, completed) => {
-        if (required <= 0) return '';
-        
-        let circlesHTML = '';
-        for (let i = 0; i < required; i++) {
-            circlesHTML += `<div class="circle ${i < completed ? 'filled' : ''}"></div>`;
-        }
-        return `
-            <div class="circles-container">
-                ${circlesHTML}
-            </div>
-        `;
-    };
+    const renderCircles = (required, completed, calculatedCount = 0) => {
+    // 如果有计算结果且未完成，使用计算结果的数字
+    const total = calculatedCount > 0 && completed < required ? calculatedCount : required;
+    if (total <= 0) return '';
+    
+    let circlesHTML = '';
+    // 已完成的蓝色圆圈
+    for (let i = 0; i < completed; i++) {
+        circlesHTML += `<div class="circle filled"></div>`;
+    }
+    // 未完成的灰色圆圈
+    for (let i = completed; i < total; i++) {
+        circlesHTML += `<div class="circle"></div>`;
+    }
+    return `<div class="circles-container">${circlesHTML}</div>`;
+};
 
     // ==================== 状态计算 ====================
 
@@ -649,7 +657,6 @@ const ResourceTracker = (() => {
             trainingItem.required :
             GAME_DATA.trainingPresets[trainingItem.tier][floor];
     
-    // 计算剩余次数
     // 计算剩余次数
         const completed = trainingItem.completed || 0;
         const remaining = Math.max(0, required - completed);
@@ -744,6 +751,10 @@ const ResourceTracker = (() => {
             if (Array.isArray(state.training[category])) {
                 state.training[category].forEach(item => {
                     item.completed = 0;
+                    // 新增：清除计算结果
+                    if (item.calculatedCount) {
+                         delete item.calculatedCount;
+                     }
                 });
                 
                 // 清除相关历史记录
@@ -1145,22 +1156,25 @@ const calculateAndApply = () => {
         updateMaterialGaps(requirements, userMaterials, 12, additionalCount);
     }
     
-    // 将计算结果填入历练输入框
+    // 将计算结果存储在状态中
     const floors = [4, 6, 8, 10, 12];
     floors.forEach((floor, index) => {
-        const input = document.querySelector(`.training-count-input[data-category="${category}"][data-index="${index}"]`);
-        if (input) {
-            const count = trainingCounts[floor];
-            input.value = count > 0 ? count : '';
-            
-            // 触发change事件以更新状态
-            const event = new Event('change');
-            input.dispatchEvent(event);
+        if (!state.training[category][index]) {
+            state.training[category][index] = {
+                completed: 0,
+                required: GAME_DATA.trainingPresets[state.training[category][index].tier][floor],
+                userModified: false,
+                tier: state.training[category][index].tier
+            };
         }
+        state.training[category][index].calculatedCount = trainingCounts[floor];
     });
+
+    // 重新渲染历练部分
+    renderTraining();
     
     // 显示计算结果
-    alert(`计算结果已填入${getCategoryName(category)}历练的输入框：
+    alert(`计算结果已更新显示：
       历练四: ${trainingCounts[4]}次
       历练六: ${trainingCounts[6]}次
       历练八: ${trainingCounts[8]}次
