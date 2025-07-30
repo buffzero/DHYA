@@ -254,22 +254,24 @@ const ResourceTracker = (() => {
     const mergeTrainingData = (savedData, category) => {
         // 如果没有保存的数据，使用默认配置
         if (!savedData) {
-            return GAME_DATA.training[category].map(item => ({
+        return GAME_DATA.training[category].map((item, index) => {
+            const floor = [4, 6, 8, 10, 12][index];
+            return {
                 completed: 0,
-                required: item.required,
+                required: GAME_DATA.trainingPresets[item.tier][floor], // 使用预设值
                 userModified: false,
                 tier: item.tier
-            }));
-        }
+            };
+        });
+    }
         
         return savedData.map((item, i) => ({
-            completed: item.completed || 0,
-            required: item.required >= 0 ? item.required : GAME_DATA.training[category][i].required,
-            userModified: item.userModified || false,
-            tier: item.tier || 17  // 确保tier有默认值
-        }));
-    };
-
+        completed: item.completed || 0,
+        required: item.userModified ? item.required : GAME_DATA.training[category][i].required,
+        userModified: item.userModified || false,
+        tier: item.tier || 17  // 确保tier有默认值
+    }));
+};
     // 检查历练完成情况
    const checkTrainingCompletion = (category, tier) => {
     const floors = [4, 6, 8, 10, 12];
@@ -513,10 +515,9 @@ const ResourceTracker = (() => {
                     </div>
                 </div>
             </div>
-            ${state.training[category].map((trainingItem, index) => {
-            const gameItem = GAME_DATA.training[category][index];
+             ${state.training[category].map((trainingItem, index) => {
             const floor = floors[index];
-            
+            // 确保使用正确的required值
             const required = trainingItem.userModified ? 
                 trainingItem.required : 
                 GAME_DATA.trainingPresets[trainingItem.tier][floor];
@@ -528,10 +529,9 @@ const ResourceTracker = (() => {
             const showCalculated = calculatedCount > 0;
             const displayRequired = showCalculated ? calculatedCount : required;
             
-            // 判断是否满足条件（计算结果为0时视为已满足）
-            const isMet = calculatedCount === 0 || completed >= required;
-            const displayStatus = isMet ? '已满足' : `${completed}/${displayRequired}`;
-            const remaining = required - completed;
+            // 判断是否满足条件
+            const isMet = completed >= displayRequired;
+              
             return `
                 <div class="training-item">
                     <div class="training-header">
@@ -719,24 +719,26 @@ const ResourceTracker = (() => {
 
     // 处理修为切换
     const handleTierChange = (category, tier) => {
-        const floors = [4, 6, 8, 10, 12];
+    const floors = [4, 6, 8, 10, 12];
+    
+    state.training[category] = state.training[category].map((item, index) => {
+        const floor = floors[index];
+        const newRequired = GAME_DATA.trainingPresets[tier][floor];
         
-        state.training[category] = state.training[category].map((item, index) => {
-            const floor = floors[index];
-            const newRequired = GAME_DATA.trainingPresets[tier][floor];
-            
-            return {
-                ...item,
-                required: newRequired,
-                tier: tier,
-                userModified: false
-            };
-        });
+        return {
+            ...item,
+            completed: item.completed, // 保持原有完成次数
+            required: newRequired,
+            tier: parseInt(tier), // 确保是数字
+            userModified: false,  // 重置为用户未修改状态
+            calculatedCount: 0    // 重置计算结果
+        };
+    });
 
-        // 强制重新渲染历练部分
-        renderTraining();
-        saveData();
-    };
+    // 强制重新渲染历练部分
+    renderTraining();
+    saveData();
+};
 
     // 一键撤销分类
     const handleResetCategory = (category) => {
