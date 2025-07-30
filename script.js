@@ -975,15 +975,6 @@ const TRAINING_RELATIONS = {
   10: ['yuShan', 'xianShan'], // 羽扇/灵山泉/宝石镜
   12: ['xianShan', 'beiShan'] // 仙门扇/霸王泪/水镜 + 悲回风扇/木兰坠露/星汉镜
 };
- 
-// 添加历练次数上限
-const TRAINING_LIMITS = {
-  4: 6,
-  6: 12,
-  8: 24,
-  10: 35,
-  12: 47
-};
 
 // 历练关卡材料掉落
 const TRAINING_DROPS = {
@@ -1056,10 +1047,6 @@ const processTrainingLevel = (requirements, userMaterials, level, primaryMat) =>
   if (gap <= 0) return 0;
   
   let count = Math.ceil(gap / TRAINING_DROPS[level]);
-  if (count > TRAINING_LIMITS[level]) {
-    console.warn(`计算次数超过上限: 历练${level}层计算${count}次，上限${TRAINING_LIMITS[level]}次`);
-    count = TRAINING_LIMITS[level];
-  }
   return count;
 };
 
