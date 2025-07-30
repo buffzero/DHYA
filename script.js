@@ -535,7 +535,9 @@ const ResourceTracker = (() => {
             // 判断是否满足条件
             const isMet = displayRequired === 0 || completed >= displayRequired;
             const displayStatus = isMet ? '已满足' : `${completed}/${displayRequired}`;
-            
+             // 计算剩余次数
+            const remaining = Math.max(0, displayRequired - completed);
+         
             return `
                 <div class="training-item">
                     <div class="training-header">
