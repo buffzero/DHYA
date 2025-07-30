@@ -523,7 +523,8 @@ const ResourceTracker = (() => {
                 
             const completed = trainingItem.completed || 0;
             const isMet = completed >= required;
-            
+            const remaining = required - completed;
+             
             // 新：获取计算结果（如果有）
             const calculatedCount = trainingItem.calculatedCount || 0;
             const showCalculated = calculatedCount > 0 && !isMet;
