@@ -517,18 +517,19 @@ const ResourceTracker = (() => {
             const gameItem = GAME_DATA.training[category][index];
             const floor = floors[index];
             
-            const required = trainingItem.userModified ?
-                trainingItem.required :
+            const required = trainingItem.userModified ? 
+                trainingItem.required : 
                 GAME_DATA.trainingPresets[trainingItem.tier][floor];
                 
             const completed = trainingItem.completed || 0;
-            const isMet = completed >= required;
-            const remaining = required - completed;
-             
-            // 新：获取计算结果（如果有）
             const calculatedCount = trainingItem.calculatedCount || 0;
-            const showCalculated = calculatedCount > 0 && !isMet;
+            
+            // 判断是否显示计算结果
+            const showCalculated = calculatedCount > 0;
             const displayRequired = showCalculated ? calculatedCount : required;
+            
+            // 判断是否满足条件（计算结果为0时视为已满足）
+            const isMet = calculatedCount === 0 || completed >= required;
             const displayStatus = isMet ? '已满足' : `${completed}/${displayRequired}`;
 
             return `
@@ -537,12 +538,10 @@ const ResourceTracker = (() => {
                         <div class="training-name">${gameItem.name}</div>
                         <div class="training-input-status">
                             <input type="text"
-                                inputmode="numeric"
                                 class="training-count-input" 
                                 data-category="${category}" 
                                 data-index="${index}"
-                                value="${displayRequired}"
-                                onfocus="this.value=''; setTimeout(() => this.select(), 10)">
+                                value="${calculatedCount === 0 ? 0 : displayRequired}">
                             <div class="sub-status-indicator ${isMet ? 'met' : 'not-met'}">
                                 ${displayStatus}
                             </div>
@@ -595,10 +594,8 @@ const ResourceTracker = (() => {
     };
 
     // 渲染圆圈进度
-    const renderCircles = (required, completed, calculatedCount = 0) => {
-    // 如果有计算结果且未完成，使用计算结果的数字
-    const total = calculatedCount > 0 && completed < required ? calculatedCount : required;
-    if (total <= 0) return '';
+   const renderCircles = (required, completed) => {
+    if (required <= 0) return ''; // 计算结果为0时不显示圆圈
     
     let circlesHTML = '';
     // 已完成的蓝色圆圈
@@ -606,7 +603,7 @@ const ResourceTracker = (() => {
         circlesHTML += `<div class="circle filled"></div>`;
     }
     // 未完成的灰色圆圈
-    for (let i = completed; i < total; i++) {
+    for (let i = completed; i < required; i++) {
         circlesHTML += `<div class="circle"></div>`;
     }
     return `<div class="circles-container">${circlesHTML}</div>`;
@@ -1168,21 +1165,18 @@ const calculateAndApply = () => {
                 tier: state.training[category][index].tier
             };
         }
+        // 明确存储计算结果，即使是0
         state.training[category][index].calculatedCount = trainingCounts[floor];
     });
 
-    // 重新渲染历练部分
     renderTraining();
     
-    // 显示计算结果
     alert(`计算结果已更新显示：
       历练四: ${trainingCounts[4]}次
       历练六: ${trainingCounts[6]}次
       历练八: ${trainingCounts[8]}次
       历练十: ${trainingCounts[10]}次
-      历练十二: ${trainingCounts[12]}次
-      
-      请检查并手动核销！`);
+      历练十二: ${trainingCounts[12]}次`);
 };
     // ==================== 工具函数 ====================
     /**
