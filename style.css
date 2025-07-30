@@ -838,11 +838,16 @@ input[type="checkbox"] {
 }
 
 /* 材料输入网格布局 - 始终两列 */
+/* 修为材料输入区域 - 优化布局和交互 */
 .material-inputs {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 1rem;
-  padding: 0 20px 16px;
+  padding: 16px;
+  background-color: var(--gray-50);
+  border-radius: var(--radius-sm);
+  margin: 12px 0;
+  border: 1px solid var(--gray-100); /* 添加边框 */
 }
 
 .material-input {
@@ -854,6 +859,7 @@ input[type="checkbox"] {
   margin-bottom: 6px;
   font-size: 0.9rem;
   color: var(--gray-800);
+  font-weight: 500; /* 加粗标签文字 */
 }
 
 .material-input input {
@@ -862,27 +868,30 @@ input[type="checkbox"] {
   border: 1px solid var(--gray-200);
   border-radius: var(--radius-sm);
   font-size: 1rem;
+  background-color: rgba(255, 255, 255, 0.8); /* 半透明背景 */
+  transition: border-color 0.2s;
 }
 
-/* 计算按钮样式 */
-.actions {
-  display: flex;
-  justify-content: center;
-  padding: 0 20px 16px;
+.material-input input:focus {
+  border-color: var(--blue); /* 聚焦时高亮 */
+  outline: none;
 }
 
+/* 计算按钮样式优化 */
 #calculate-cultivation {
   background-color: var(--blue);
   color: white;
   border: none;
   border-radius: var(--radius-sm);
   padding: 12px 24px;
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.2s;
   width: 100%;
   max-width: 300px;
+  margin: 0 auto;
+  display: block;
 }
 
 #calculate-cultivation:hover {
