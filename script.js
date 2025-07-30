@@ -1088,6 +1088,7 @@ const calculateAndApply = () => {
     const trainingCounts = {4:0, 6:0, 8:0, 10:0, 12:0};
     
     // 处理单层历练计算
+// 处理单层历练计算
 const processTrainingLevel = (requirements, userMaterials, level, primaryMat) => {
   const gap = requirements[primaryMat] - (userMaterials[primaryMat] || 0);
   if (gap <= 0) return 0;
@@ -1105,6 +1106,8 @@ const processTrainingLevel = (requirements, userMaterials, level, primaryMat) =>
 
 // 计算并应用
 const calculateAndApply = () => {
+  console.log('开始计算修为材料...');
+  
   const attribute = dom.cultivationAttribute.value;
   const tier = parseInt(dom.cultivationTier.value);
   const category = attribute === 'yinYang' ? 'yinYang' : 
@@ -1113,6 +1116,12 @@ const calculateAndApply = () => {
   // 获取用户输入
   const userMaterials = {};
   const materialContainer = document.getElementById(`${attribute}-materials`);
+  if (!materialContainer) {
+    console.error('找不到材料容器:', `${attribute}-materials`);
+    alert('错误：找不到对应的材料输入区域');
+    return;
+  }
+  
   const materialInputs = materialContainer.querySelectorAll('input');
   materialInputs.forEach(input => {
     userMaterials[input.dataset.material] = parseInt(input.value) || 0;
