@@ -531,7 +531,7 @@ const ResourceTracker = (() => {
             // 判断是否满足条件（计算结果为0时视为已满足）
             const isMet = calculatedCount === 0 || completed >= required;
             const displayStatus = isMet ? '已满足' : `${completed}/${displayRequired}`;
-
+            const remaining = required - completed;
             return `
                 <div class="training-item">
                     <div class="training-header">
