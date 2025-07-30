@@ -200,10 +200,11 @@ const ResourceTracker = (() => {
         console.log('🚀 密探资源系统启动...');
         try {
             setupDOM();
-            loadData();
-            renderAll();
-            setupCultivationListeners();
-            setupEventListeners();
+        loadData();
+        renderAll();
+        updateMaterialInputsVisibility(); 
+        setupCultivationListeners();
+        setupEventListeners();
             console.log('✅ 初始化完成');
         } catch (error) {
             console.error('初始化过程中出错:', error);
@@ -927,19 +928,11 @@ const setupCultivationListeners = () => {
             return;
         }
 
+        // 初始渲染材料输入区域
+        updateMaterialInputsVisibility();
+
         // 属性切换显示对应材料
-        dom.cultivationAttribute.addEventListener('change', (e) => {
-            const attribute = e.target.value;
-            document.querySelectorAll('.material-inputs').forEach(el => {
-                el.style.display = 'none';
-            });
-            const target = document.getElementById(`${attribute}-materials`);
-            if (target) {
-                target.style.display = 'grid';
-            } else {
-                console.error('找不到材料容器:', `${attribute}-materials`);
-            }
-        });
+        dom.cultivationAttribute.addEventListener('change', updateMaterialInputsVisibility);
         
         // 计算并应用按钮
         dom.calculateCultivation.addEventListener('click', () => {
@@ -950,6 +943,22 @@ const setupCultivationListeners = () => {
                 alert('计算失败: ' + error.message);
             }
         });
+    } catch (error) {
+        console.error('初始化修为材料监听失败:', error);
+    }
+};
+
+// 新增函数：更新材料输入区域可见性
+const updateMaterialInputsVisibility = () => {
+    const attribute = dom.cultivationAttribute.value;
+    document.querySelectorAll('.material-inputs').forEach(el => {
+        el.style.display = 'none';
+    });
+    const target = document.getElementById(`${attribute}-materials`);
+    if (target) {
+        target.style.display = 'grid';
+    }
+};
         
         // 默认显示风火材料
         document.getElementById('windFire-materials').style.display = 'grid';
