@@ -528,15 +528,15 @@ const ResourceTracker = (() => {
             const completed = trainingItem.completed || 0;
             const calculatedCount = trainingItem.calculatedCount || 0;
             
-            // 判断是否显示计算结果
-            const showCalculated = calculatedCount > 0;
-            const displayRequired = showCalculated ? calculatedCount : required;
+            // 确定显示的需求次数
+            const displayRequired = calculatedCount > 0 ? calculatedCount : required;
+            
+            // 计算剩余次数（关键修复点）
+            const remaining = Math.max(0, displayRequired - completed);
             
             // 判断是否满足条件
             const isMet = displayRequired === 0 || completed >= displayRequired;
             const displayStatus = isMet ? '已满足' : `${completed}/${displayRequired}`;
-             // 计算剩余次数
-            const remaining = Math.max(0, displayRequired - completed);
          
             return `
                 <div class="training-item">
