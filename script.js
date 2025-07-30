@@ -959,41 +959,59 @@ const setupCultivationListeners = () => {
 };
 // 材料需求配置
 const MATERIAL_REQUIREMENTS = {
-    windFire: {
-        13: { juanShan: 180, cuiShan: 570, jinShan: 1440, yuShan: 1610, xianShan: 660, beiShan: 0 },
-        15: { juanShan: 180, cuiShan: 570, jinShan: 1440, yuShan: 2550, xianShan: 2070, beiShan: 0 },
-        17: { juanShan: 180, cuiShan: 570, jinShan: 1440, yuShan: 2550, xianShan: 3420, beiShan: 2100 }
-    },
-    yinYang: {
-        13: { tongJing: 180, liuJing: 570, liuJinJing: 1440, baoShiJing: 1610, shuiJing: 660, xingHanJing: 0 },
-        15: { tongJing: 180, liuJing: 570, liuJinJing: 1440, baoShiJing: 2550, shuiJing: 2070, xingHanJing: 0 },
-        17: { tongJing: 180, liuJing: 570, liuJinJing: 1440, baoShiJing: 2550, shuiJing: 3420, xingHanJing: 2100 }
-    },
-    earthWater: {
-        13: { zhuoJiu: 180, qingJiu: 570, baiJiu: 1440, lingQuan: 1610, baWangLei: 660, muLan: 0 },
-        15: { zhuoJiu: 180, qingJiu: 570, baiJiu: 1440, lingQuan: 2550, baWangLei: 2070, muLan: 0 },
-        17: { zhuoJiu: 180, qingJiu: 570, baiJiu: 1440, lingQuan: 2550, baWangLei: 3420, muLan: 2100 }
-    }
+  windFire: {
+    13: { juanShan: 180, cuiShan: 570, jinShan: 1440, yuShan: 1610, xianShan: 660, beiShan: 0 },
+    15: { juanShan: 180, cuiShan: 570, jinShan: 1440, yuShan: 2550, xianShan: 2070, beiShan: 0 },
+    17: { juanShan: 180, cuiShan: 570, jinShan: 1440, yuShan: 2550, xianShan: 3420, beiShan: 2100 }
+  },
+  yinYang: {
+    13: { tongJing: 180, liuJing: 570, liuJinJing: 1440, baoShiJing: 1610, shuiJing: 660, xingHanJing: 0 },
+    15: { tongJing: 180, liuJing: 570, liuJinJing: 1440, baoShiJing: 2550, shuiJing: 2070, xingHanJing: 0 },
+    17: { tongJing: 180, liuJing: 570, liuJinJing: 1440, baoShiJing: 2550, shuiJing: 3420, xingHanJing: 2100 }
+  },
+  earthWater: {
+    13: { zhuoJiu: 180, qingJiu: 570, baiJiu: 1440, lingQuan: 1610, baWangLei: 660, muLan: 0 },
+    15: { zhuoJiu: 180, qingJiu: 570, baiJiu: 1440, lingQuan: 2550, baWangLei: 2070, muLan: 0 },
+    17: { zhuoJiu: 180, qingJiu: 570, baiJiu: 1440, lingQuan: 2550, baWangLei: 3420, muLan: 2100 }
+  }
 };
 
 // 历练层数与材料关系
 const TRAINING_RELATIONS = {
-    4: ['juanShan', 'cuiShan', 'tongJing', 'liuJing', 'zhuoJiu', 'qingJiu'],
-    6: ['cuiShan', 'jinShan', 'liuJing', 'liuJinJing', 'qingJiu', 'baiJiu'],
-    8: ['jinShan', 'yuShan', 'liuJinJing', 'baoShiJing', 'baiJiu', 'lingQuan'],
-    10: ['yuShan', 'xianShan', 'baoShiJing', 'shuiJing', 'lingQuan', 'baWangLei'],
-    12: ['xianShan', 'beiShan', 'shuiJing', 'xingHanJing', 'baWangLei', 'muLan']
+  4: ['juanShan', 'cuiShan'], // 绢扇/浊酒/铜镜
+  6: ['cuiShan', 'jinShan'],  // 翠扇/清酒/六博镜
+  8: ['jinShan', 'yuShan'],   // 金丝扇/百末旨酒/鎏金镜
+  10: ['yuShan', 'xianShan'], // 羽扇/灵山泉/宝石镜
+  12: ['xianShan', 'beiShan'] // 仙门扇/霸王泪/水镜 + 悲回风扇/木兰坠露/星汉镜
+};
+ 
+// 添加历练次数上限
+const TRAINING_LIMITS = {
+  4: 6,
+  6: 12,
+  8: 24,
+  10: 35,
+  12: 47
 };
 
 // 历练关卡材料掉落
 const TRAINING_DROPS = {
-    4: 30, // 每层掉落30个材料
-    6: 40,
-    8: 45,
-    10: 50,
-    12: 60
+  4: 30, // 每层掉落30个材料
+  6: 40,
+  8: 45,
+  10: 50,
+  12: 60
 };
-
+// 更新材料缺口
+const updateGaps = (requirements, level, count) => {
+  const materials = TRAINING_RELATIONS[level];
+  materials.forEach(mat => {
+    if (requirements[mat]) {
+      requirements[mat] = Math.max(0, requirements[mat] - count * TRAINING_DROPS[level]);
+    }
+  });
+};
+ 
  const applyToTraining = (category, counts) => {
     console.log('应用计算结果到历练:', category, counts);
     
@@ -1069,34 +1087,86 @@ const calculateAndApply = () => {
     // 计算各历练次数
     const trainingCounts = {4:0, 6:0, 8:0, 10:0, 12:0};
     
-    // 修复计算逻辑 - 使用实际缺口计算
-    const processTrainingLevel = (level, primaryMat) => {
-        // 计算实际缺口 = 需求 - 已有材料
-        const gap = requirements[primaryMat] - userMaterials[primaryMat];
-        if (gap <= 0) return 0;
-        
-        // 计算需要刷的次数 = 缺口 / 每次掉落数量
-        const count = Math.ceil(gap / TRAINING_DROPS[level]);
-        trainingCounts[level] = count;
-        return count;
-    };
+    // 处理单层历练计算
+const processTrainingLevel = (requirements, userMaterials, level, primaryMat) => {
+  const gap = requirements[primaryMat] - (userMaterials[primaryMat] || 0);
+  if (gap <= 0) return 0;
+  
+  let count = Math.ceil(gap / TRAINING_DROPS[level]);
+  
+  // 添加上限检查
+  if (count > TRAINING_LIMITS[level]) {
+    console.warn(`计算次数超过上限: 历练${level}层计算${count}次，上限${TRAINING_LIMITS[level]}次`);
+    count = TRAINING_LIMITS[level];
+  }
+  
+  return count;
+};
 
-    // 重新组织计算顺序
-    if (tier === 17) {
-        if (requirements.xingHanJing > 0) processTrainingLevel(12, 'xingHanJing');
-        if (requirements.shuiJing > 0) processTrainingLevel(10, 'shuiJing');
-    } else if (tier === 15) {
-        if (requirements.shuiJing > 0) processTrainingLevel(10, 'shuiJing');
-    }
-    
-    if (requirements.liuJinJing > 0) processTrainingLevel(8, 'liuJinJing');
-    if (requirements.liuJing > 0) processTrainingLevel(6, 'liuJing');
-    if (requirements.tongJing > 0) processTrainingLevel(4, 'tongJing');
+// 计算并应用
+const calculateAndApply = () => {
+  const attribute = dom.cultivationAttribute.value;
+  const tier = parseInt(dom.cultivationTier.value);
+  const category = attribute === 'yinYang' ? 'yinYang' : 
+                  attribute === 'windFire' ? 'windFire' : 'earthWater';
+  
+  // 获取用户输入
+  const userMaterials = {};
+  const materialContainer = document.getElementById(`${attribute}-materials`);
+  const materialInputs = materialContainer.querySelectorAll('input');
+  materialInputs.forEach(input => {
+    userMaterials[input.dataset.material] = parseInt(input.value) || 0;
+  });
 
-    // 应用计算结果
-    applyToTraining(category, trainingCounts);
-    
-    alert(`计算完成！已自动应用历练次数：
+  // 获取材料需求
+  const requirements = JSON.parse(JSON.stringify(
+    MATERIAL_REQUIREMENTS[attribute][tier]
+  ));
+
+  // 计算各历练次数
+  const trainingCounts = {4:0, 6:0, 8:0, 10:0, 12:0};
+  
+  // 从最高层开始计算
+  trainingCounts[12] = processTrainingLevel(
+    requirements, userMaterials, 12, 
+    attribute === 'yinYang' ? 'xingHanJing' : 
+    attribute === 'windFire' ? 'beiShan' : 'muLan'
+  );
+  updateGaps(requirements, 12, trainingCounts[12]);
+  
+  trainingCounts[10] = processTrainingLevel(
+    requirements, userMaterials, 10,
+    attribute === 'yinYang' ? 'shuiJing' : 
+    attribute === 'windFire' ? 'xianShan' : 'baWangLei'
+  );
+  updateGaps(requirements, 10, trainingCounts[10]);
+  
+  trainingCounts[8] = processTrainingLevel(
+    requirements, userMaterials, 8,
+    attribute === 'yinYang' ? 'baoShiJing' : 
+    attribute === 'windFire' ? 'yuShan' : 'lingQuan'
+  );
+  updateGaps(requirements, 8, trainingCounts[8]);
+  
+  trainingCounts[6] = processTrainingLevel(
+    requirements, userMaterials, 6,
+    attribute === 'yinYang' ? 'liuJing' : 
+    attribute === 'windFire' ? 'jinShan' : 'baiJiu'
+  );
+  updateGaps(requirements, 6, trainingCounts[6]);
+  
+  trainingCounts[4] = processTrainingLevel(
+    requirements, userMaterials, 4,
+    attribute === 'yinYang' ? 'tongJing' : 
+    attribute === 'windFire' ? 'juanShan' : 'zhuoJiu'
+  );
+  updateGaps(requirements, 4, trainingCounts[4]);
+  
+  // 应用计算结果
+  applyToTraining(category, trainingCounts);
+  
+  // 显示结果
+  alert(`计算完成！已自动应用历练次数：
     历练四: ${trainingCounts[4]}次
     历练六: ${trainingCounts[6]}次
     历练八: ${trainingCounts[8]}次
