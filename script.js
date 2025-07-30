@@ -969,32 +969,59 @@ const MATERIAL_REQUIREMENTS = {
 
 // 历练层数与材料关系
 const TRAINING_RELATIONS = {
-  4: ['juanShan', 'cuiShan'], // 绢扇/浊酒/铜镜
-  6: ['cuiShan', 'jinShan'],  // 翠扇/清酒/六博镜
-  8: ['jinShan', 'yuShan'],   // 金丝扇/百末旨酒/鎏金镜
-  10: ['yuShan', 'xianShan'], // 羽扇/灵山泉/宝石镜
-  12: ['xianShan', 'beiShan'] // 仙门扇/霸王泪/水镜 + 悲回风扇/木兰坠露/星汉镜
+  4: ['juanShan', 'cuiShan'], // 历练四：绢扇/浊酒/铜镜 + 翠扇/清酒/六博镜
+  6: ['cuiShan', 'jinShan'],  // 历练六：翠扇/清酒/六博镜 + 金丝扇/百末旨酒/鎏金镜
+  8: ['jinShan', 'yuShan'],   // 历练八：金丝扇/百末旨酒/鎏金镜 + 羽扇/灵山泉/宝石镜
+  10: ['yuShan', 'xianShan'], // 历练十：羽扇/灵山泉/宝石镜 + 仙门扇/霸王泪/水镜
+  12: ['xianShan', 'beiShan'] // 历练十二：仙门扇/霸王泪/水镜 + 悲回风扇/星汉镜/木兰坠露
 };
+
 
 // 历练关卡材料掉落
 const TRAINING_DROPS = {
-  4: 30,  // 历练四：绢扇/铜镜/浊酒 + 翠扇/六博镜/清酒
-  6: 40,  // 历练六：翠扇/六博镜/清酒 + 金丝扇/鎏金镜/百末旨酒
-  8: 45,  // 历练八：金丝扇/鎏金镜/百末旨酒 + 羽扇/宝石镜/灵山泉
-  10: 50, // 历练十：羽扇/宝石镜/灵山泉 + 仙门扇/水镜/霸王泪
-  12: 60  // 历练十二：仙门扇/水镜/霸王泪 + 悲回风扇/星汉镜/木兰坠露
-};
-// 更新材料缺口
-const updateGaps = (requirements, level, count) => {
-  const materials = TRAINING_RELATIONS[level];
-  materials.forEach(mat => {
-    if (requirements[mat]) {
-      requirements[mat] = Math.max(0, requirements[mat] - count * TRAINING_DROPS[level]);
-    }
-  });
+  4: { primary: 30, secondary: 20 },  // 历练四：主材料×30，副材料×20
+  6: { primary: 40, secondary: 30 },  // 历练六：主材料×40，副材料×30
+  8: { primary: 45, secondary: 35 },  // 历练八：主材料×45，副材料×35
+  10: { primary: 50, secondary: 40 }, // 历练十：主材料×50，副材料×40
+  12: { primary: 60, secondary: 45 }  // 历练十二：主材料×60，副材料×45
 };
  
- const applyToTraining = (category, counts) => {
+ // 计算指定历练层数需要的次数
+const calculateTrainingCount = (requirements, userMaterials, level, primaryMat) => {
+    // 计算缺口
+    const gap = Math.max(0, requirements[primaryMat] - (userMaterials[primaryMat] || 0));
+    if (gap <= 0) return 0;
+    
+    // 根据历练层数获取每次掉落数量
+    const dropsPerRun = TRAINING_DROPS[level].primary;
+    
+    // 计算需要的次数（向上取整）
+    const count = Math.ceil(gap / dropsPerRun);
+    return count;
+};
+
+// 更新材料缺口（考虑主副材料）
+const updateMaterialGaps = (requirements, userMaterials, level, count) => {
+    if (count <= 0) return;
+    
+    const materials = TRAINING_RELATIONS[level];
+    const drops = TRAINING_DROPS[level];
+    
+    // 主材料扣除
+    if (requirements[materials[0]]) {
+        const totalDrops = count * drops.primary;
+        requirements[materials[0]] = Math.max(0, requirements[materials[0]] - totalDrops);
+    }
+    
+    // 副材料扣除
+    if (materials[1] && requirements[materials[1]]) {
+        const totalDrops = count * drops.secondary;
+        requirements[materials[1]] = Math.max(0, requirements[materials[1]] - totalDrops);
+    }
+};
+
+ // 应用计算结果到历练
+const applyToTraining = (category, counts) => {
     console.log('应用计算结果到历练:', category, counts);
     
     const floors = [4, 6, 8, 10, 12];
@@ -1041,15 +1068,6 @@ const updateGaps = (requirements, level, count) => {
     updateAndSave();
 };
 
-    // 处理单层历练计算
-const processTrainingLevel = (requirements, userMaterials, level, primaryMat) => {
-  const gap = requirements[primaryMat] - (userMaterials[primaryMat] || 0);
-  if (gap <= 0) return 0;
-  
-  let count = Math.ceil(gap / TRAINING_DROPS[level]);
-  return count;
-};
-
 
 // 计算并应用历练次数
 const calculateAndApply = () => {
@@ -1082,41 +1100,51 @@ const calculateAndApply = () => {
     // 计算各层历练次数
     const trainingCounts = {4:0, 6:0, 8:0, 10:0, 12:0};
     
-    // 从最高层开始计算（12层 → 4层）
-    trainingCounts[12] = processTrainingLevel(
+    // 从最低级材料开始计算（4层 → 12层）
+    // 1. 计算历练四（最低级材料）
+    trainingCounts[4] = calculateTrainingCount(
+        requirements, userMaterials, 4, 
+        TRAINING_RELATIONS[4][0] // 主材料（绢扇/铜镜/浊酒）
+    );
+    updateMaterialGaps(requirements, userMaterials, 4, trainingCounts[4]);
+    
+    // 2. 计算历练六
+    trainingCounts[6] = calculateTrainingCount(
+        requirements, userMaterials, 6, 
+        TRAINING_RELATIONS[6][0] // 主材料（翠扇/六博镜/清酒）
+    );
+    updateMaterialGaps(requirements, userMaterials, 6, trainingCounts[6]);
+    
+    // 3. 计算历练八
+    trainingCounts[8] = calculateTrainingCount(
+        requirements, userMaterials, 8, 
+        TRAINING_RELATIONS[8][0] // 主材料（金丝扇/鎏金镜/百末旨酒）
+    );
+    updateMaterialGaps(requirements, userMaterials, 8, trainingCounts[8]);
+    
+    // 4. 计算历练十
+    trainingCounts[10] = calculateTrainingCount(
+        requirements, userMaterials, 10, 
+        TRAINING_RELATIONS[10][0] // 主材料（羽扇/宝石镜/灵山泉）
+    );
+    updateMaterialGaps(requirements, userMaterials, 10, trainingCounts[10]);
+    
+    // 5. 计算历练十二（最高级材料）
+    trainingCounts[12] = calculateTrainingCount(
         requirements, userMaterials, 12, 
-        attribute === 'yinYang' ? 'xingHanJing' : 
-        attribute === 'windFire' ? 'beiShan' : 'muLan'
+        TRAINING_RELATIONS[12][0] // 主材料（仙门扇/水镜/霸王泪）
     );
-    updateGaps(requirements, 12, trainingCounts[12]);
+    updateMaterialGaps(requirements, userMaterials, 12, trainingCounts[12]);
     
-    trainingCounts[10] = processTrainingLevel(
-        requirements, userMaterials, 10,
-        attribute === 'yinYang' ? 'shuiJing' : 
-        attribute === 'windFire' ? 'xianShan' : 'baWangLei'
-    );
-    updateGaps(requirements, 10, trainingCounts[10]);
-    
-    trainingCounts[8] = processTrainingLevel(
-        requirements, userMaterials, 8,
-        attribute === 'yinYang' ? 'baoShiJing' : 
-        attribute === 'windFire' ? 'yuShan' : 'lingQuan'
-    );
-    updateGaps(requirements, 8, trainingCounts[8]);
-    
-    trainingCounts[6] = processTrainingLevel(
-        requirements, userMaterials, 6,
-        attribute === 'yinYang' ? 'liuJing' : 
-        attribute === 'windFire' ? 'jinShan' : 'baiJiu'
-    );
-    updateGaps(requirements, 6, trainingCounts[6]);
-    
-    trainingCounts[4] = processTrainingLevel(
-        requirements, userMaterials, 4,
-        attribute === 'yinYang' ? 'tongJing' : 
-        attribute === 'windFire' ? 'juanShan' : 'zhuoJiu'
-    );
-    updateGaps(requirements, 4, trainingCounts[4]);
+    // 6. 如果有悲回风扇/星汉镜/木兰坠露需求，再计算历练十二
+    if (requirements[TRAINING_RELATIONS[12][1]] > 0) {
+        const additionalCount = calculateTrainingCount(
+            requirements, userMaterials, 12, 
+            TRAINING_RELATIONS[12][1] // 副材料（悲回风扇/星汉镜/木兰坠露）
+        );
+        trainingCounts[12] += additionalCount;
+        updateMaterialGaps(requirements, userMaterials, 12, additionalCount);
+    }
     
     // 应用计算结果到历练进度
     applyToTraining(category, trainingCounts);
