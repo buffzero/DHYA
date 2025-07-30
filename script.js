@@ -919,6 +919,19 @@ const ResourceTracker = (() => {
             }
         });
     };
+
+          // 更新材料输入区域可见性
+const updateMaterialInputsVisibility = () => {
+    const attribute = dom.cultivationAttribute.value;
+    document.querySelectorAll('.material-inputs').forEach(el => {
+        el.style.display = 'none';
+    });
+    const target = document.getElementById(`${attribute}-materials`);
+    if (target) {
+        target.style.display = 'grid';
+    }
+};
+ 
 // 新增函数：设置修为材料事件监听
 const setupCultivationListeners = () => {
     try {
@@ -935,33 +948,19 @@ const setupCultivationListeners = () => {
         dom.cultivationAttribute.addEventListener('change', updateMaterialInputsVisibility);
         
         // 计算并应用按钮
-        dom.calculateCultivation.addEventListener('click', () => {
-            try {
-                calculateAndApply();
-            } catch (error) {
-                console.error('计算修为材料出错:', error);
-                alert('计算失败: ' + error.message);
-            }
-        });
+        dom.calculateCultivation.addEventListener('click', calculateAndApply);
+        
+        // 默认显示风火材料
+        document.getElementById('windFire-materials').style.display = 'grid';
+        document.getElementById('yinYang-materials').style.display = 'none';
+        document.getElementById('earthWater-materials').style.display = 'none';
     } catch (error) {
         console.error('初始化修为材料监听失败:', error);
     }
 };
 
-// 新增函数：更新材料输入区域可见性
-const updateMaterialInputsVisibility = () => {
-    const attribute = dom.cultivationAttribute.value;
-    document.querySelectorAll('.material-inputs').forEach(el => {
-        el.style.display = 'none';
-    });
-    const target = document.getElementById(`${attribute}-materials`);
-    if (target) {
-        target.style.display = 'grid';
-    }
-};
 
-// 默认显示风火材料（独立代码，不属于任何函数）
-document.getElementById('windFire-materials').style.display = 'grid';
+
  
 // 材料需求配置
 const MATERIAL_REQUIREMENTS = {
@@ -1078,16 +1077,6 @@ const processTrainingLevel = (requirements, userMaterials, level, primaryMat) =>
   return count;
 };
 
-// 更新材料缺口
-const updateGaps = (requirements, level, count) => {
-  const materials = TRAINING_RELATIONS[level];
-  materials.forEach(mat => {
-    if (requirements[mat]) {
-      requirements[mat] = Math.max(0, requirements[mat] - count * TRAINING_DROPS[level]);
-    }
-  });
-};
-
 // 应用到历练进度
 const applyToTraining = (category, counts) => {
   const floors = [4, 6, 8, 10, 12];
@@ -1193,6 +1182,9 @@ const calculateAndApply = () => {
  * 兼容旧版数据迁移
  * 说明：旧版本没有trainingCompletions字段，需要初始化
  */
+ // 更新材料输入区域可见性
+
+ 
 const migrateOldData = (savedData) => {
     // 如果是从旧版升级（没有trainingCompletions字段）
     if (!savedData.trainingCompletions) {
