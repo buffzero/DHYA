@@ -1240,7 +1240,7 @@ const migrateOldData = (savedData) => {
         fragments: 0,
         scrolls: 0,
         materials,
-        trainingCompletions: {
+        trainingCompletions: {  // 新增：确保清零
             yinYang: {13: 0, 15: 0, 17: 0},
             windFire: {13: 0, 15: 0, 17: 0},
             earthWater: {13: 0, 15: 0, 17: 0}
