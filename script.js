@@ -279,20 +279,13 @@ const ResourceTracker = (() => {
 };
     // 检查历练完成情况
    const checkTrainingCompletion = (category, tier) => {
-    const floors = [4, 6, 8, 10, 12];
-    let minCompletion = Infinity;
-    
-    floors.forEach((floor, index) => {
-        const trainingItem = state.training[category][index];
-        const required = trainingItem.userModified 
-            ? trainingItem.required 
+    return state.training[category].reduce((min, item, index) => {
+        const floor = [4, 6, 8, 10, 12][index];
+        const required = item.userModified 
+            ? item.required 
             : GAME_DATA.trainingPresets[tier][floor];
-        
-        const rounds = Math.floor(trainingItem.completed / required);
-        minCompletion = Math.min(minCompletion, rounds);
-    });
-    
-    return minCompletion === Infinity ? 0 : minCompletion;
+        return Math.min(min, Math.floor(item.completed / required));
+    }, Infinity) || 0;
 };
     // ==================== setupDOM 函数 ====================
     const setupDOM = () => {
