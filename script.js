@@ -199,6 +199,9 @@ const ResourceTracker = (() => {
     const init = () => {
         console.log('🚀 密探资源系统启动...');
        try {
+         if (typeof setupDOM !== 'function' || typeof loadData !== 'function') {
+            throw new Error('核心函数未正确定义');
+        }
     setupDOM();
     loadData();
     renderAll();
@@ -222,7 +225,7 @@ const ResourceTracker = (() => {
 }
 
     // ==================== loadData 函数 ====================
-   const loadData = () => {
+   function loadData() {
     try {
         // 1. 尝试从本地存储读取数据
         const saved = localStorage.getItem(CONFIG.storageKey);
@@ -1249,9 +1252,9 @@ const calculateAndApply = () => {
 
  
 const migrateOldData = (savedData) => {
-    // 如果是从旧版升级（没有trainingCompletions字段）
-    if (!savedData.trainingCompletions) {
-        console.log('检测到旧版数据，初始化修为完成记录...');
+    // 添加参数检查
+    if (!savedData || typeof savedData !== 'object') {
+        console.log('无效的存档数据，初始化默认修为完成记录...');
         return {
             yinYang: {13: 0, 15: 0, 17: 0},
             windFire: {13: 0, 15: 0, 17: 0},
