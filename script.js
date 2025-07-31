@@ -279,12 +279,14 @@ const ResourceTracker = (() => {
 };
     // 检查历练完成情况
    const checkTrainingCompletion = (category, tier) => {
+    if (!state.training[category]) return 0;
+    
     return state.training[category].reduce((min, item, index) => {
         const floor = [4, 6, 8, 10, 12][index];
         const required = item.userModified 
             ? item.required 
-            : GAME_DATA.trainingPresets[tier][floor];
-        return Math.min(min, Math.floor(item.completed / required));
+            : (GAME_DATA.trainingPresets[tier]?.[floor] || 1); // 防止undefined
+        return Math.min(min, Math.floor((item.completed || 0) / required));
     }, Infinity) || 0;
 };
     // ==================== setupDOM 函数 ====================
