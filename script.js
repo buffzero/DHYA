@@ -471,13 +471,11 @@ const ResourceTracker = (() => {
     // 渲染单个历练类别
    const renderTrainingCategory = (category, container) => {
     const floors = [4, 6, 8, 10, 12];
-    const categoryName = getCategoryName(category);
     
-    // 调试日志：检查关键数据
-    console.log(`渲染 ${category} 历练数据:`, {
-        trainingItems: state.training[category],
-        completions: state.trainingCompletions[category],
-        calculatedCounts: state.training[category].map(i => i.calculatedCount)
+    // 调试日志
+    console.log(`重置后${category}数据:`, {
+        training: state.training[category],
+        completions: state.trainingCompletions[category]
     });
 
     // 生成修为徽章（显示已完成次数）
@@ -519,18 +517,20 @@ const ResourceTracker = (() => {
                 </div>
             </div>
         </div>
-        ${state.training[category].map((trainingItem, index) => {
+       ${state.training[category].map((trainingItem, index) => {
             const floor = floors[index];
             const baseRequired = GAME_DATA.trainingPresets[trainingItem.tier][floor];
             
-            // 关键修改：统一显示逻辑
             const displayRequired = (trainingItem.calculatedCount !== undefined && trainingItem.calculatedCount !== null) 
                 ? trainingItem.calculatedCount 
                 : (trainingItem.userModified ? trainingItem.required : baseRequired);
             
             const completed = trainingItem.completed || 0;
             const isMet = displayRequired === 0 || completed >= displayRequired;
+            
+            // 关键修复：确保remaining变量正确定义
             const remaining = isMet ? 0 : Math.max(0, displayRequired - completed);
+
          
             return `
                 <div class="training-item">
