@@ -536,7 +536,8 @@ const ResourceTracker = (() => {
             
             const completed = trainingItem.completed || 0;
             const isMet = displayRequired === 0 || completed >= displayRequired;
-            
+            const remaining = isMet ? 0 : Math.max(0, displayRequired - completed);
+         
             return `
                 <div class="training-item">
                     <div class="training-header">
