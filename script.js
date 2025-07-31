@@ -251,8 +251,8 @@ const safelyMergeMaterials = (savedMaterials, defaultMaterials) => {
             </button>
         </div>
     `;
-}
-
+  }
+};
     // ==================== loadData 函数 ====================
    function loadData() {
     try {
