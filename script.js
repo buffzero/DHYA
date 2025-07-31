@@ -130,7 +130,36 @@ const ResourceTracker = (() => {
             dom.lastUpdated.textContent = `最近更新：${formatDate(date)}`;
         }
     };
+    // 辅助函数：安全合并材料数据
+const safelyMergeMaterials = (savedMaterials, defaultMaterials) => {
+    const merged = { ...defaultMaterials };
+    if (!savedMaterials || typeof savedMaterials !== 'object') {
+        return merged;
+    }
 
+    GAME_DATA.materials.forEach(material => {
+        if (material.id in savedMaterials) {
+            merged[material.id] = !!savedMaterials[material.id]; // 确保转换为布尔值
+        }
+    });
+    return merged;
+};
+    // 辅助函数：合并历练数据
+    const mergeTrainingData = (savedData, defaultData) => {
+    if (!savedData) return defaultData;
+    
+    return savedData.map((item, index) => {
+        const defaultItem = defaultData[index] || {};
+        return {
+            completed: item.completed || 0,
+            required: item.userModified ? item.required : defaultItem.required,
+            userModified: item.userModified || false,
+            tier: item.tier || defaultItem.tier || 17,
+            calculatedCount: item.calculatedCount || 0
+        };
+    });
+};
+    
     // ==================== 状态管理 ====================
     let state = {
         // 基础状态
@@ -265,17 +294,16 @@ const ResourceTracker = (() => {
                 ? parsed.trainingHistory 
                 : baseState.trainingHistory,
             
-            // 特殊处理training数据（防止undefined污染）
-            // 修正后
+            // 特殊处理training数据
 training: {
-    yinYang: mergeTrainingData(parsed.training?.yinYang, baseState.training.yinYang) || baseState.training.yinYang,
-    windFire: mergeTrainingData(parsed.training?.windFire, baseState.training.windFire) || baseState.training.windFire,
-    earthWater: mergeTrainingData(parsed.training?.earthWater, baseState.training.earthWater) || baseState.training.earthWater
-},
-            
-            // 强制重置完成记录（解决你反馈的问题）
-            trainingCompletions: { ...baseState.trainingCompletions }
-        };
+        yinYang: mergeTrainingData(parsed.training?.yinYang, baseState.training.yinYang),
+        windFire: mergeTrainingData(parsed.training?.windFire, baseState.training.windFire),
+        earthWater: mergeTrainingData(parsed.training?.earthWater, baseState.training.earthWater)
+    },
+    
+    // 强制重置完成记录
+    trainingCompletions: parsed.trainingCompletions || { ...baseState.trainingCompletions }
+};
 
         console.log('数据加载完成', { 
             loadedMaterials: Object.keys(state.materials).length,
@@ -294,46 +322,6 @@ training: {
         saveData(); 
         alert('存档数据损坏，已重置为初始状态');
     }
-};
-
-// 辅助函数：安全合并材料数据
-const safelyMergeMaterials = (savedMaterials, defaultMaterials) => {
-    const merged = { ...defaultMaterials };
-    if (!savedMaterials || typeof savedMaterials !== 'object') {
-        return merged;
-    }
-
-    GAME_DATA.materials.forEach(material => {
-        if (material.id in savedMaterials) {
-            merged[material.id] = !!savedMaterials[material.id]; // 确保转换为布尔值
-        }
-    });
-    return merged;
-};
-    // 辅助函数：合并历练数据
-    const mergeTrainingData = (savedData, defaultData) => {
-    if (!savedData) return defaultData;
-    
-    return savedData.map((item, index) => {
-        const defaultItem = defaultData[index] || {};
-        return {
-            completed: item.completed || 0,
-            required: item.userModified ? item.required : defaultItem.required,
-            userModified: item.userModified || false,
-            tier: item.tier || defaultItem.tier || 17,
-            calculatedCount: item.calculatedCount || 0
-        };
-    });
-};
-    
-    // 处理保存的数据
-    return savedData.map((item, i) => ({
-        completed: item.completed || 0,
-        required: item.userModified ? item.required : GAME_DATA.training[category][i].required,
-        userModified: item.userModified || false,
-        tier: item.tier || 17, // 默认17级修为
-        calculatedCount: item.calculatedCount || 0 // 确保这个字段存在
-    }));
 };
     // 检查历练完成情况
    const checkTrainingCompletion = (category, tier) => {
