@@ -486,12 +486,6 @@ const ResourceTracker = (() => {
       需求次数: ${state.training[category].map(i => 
         i.userModified ? i.required : GAME_DATA.trainingPresets[i.tier][floors[i]]).join(',')}
     `);
-    // +++ 日志结束 +++
-    console.log(`[修为切换验证] ${category} 
-  新修为: ${tier} 
-  进度保留: ${state.training[category].map(i => i.completed).join(',')}
-  新需求: ${state.training[category].map(i => i.required).join(',')}
-`);
     
     // 生成修为徽章（显示已完成+可完成次数） - 这部分不需要修改
     const completionBadges = [13, 15, 17].map(tier => {
