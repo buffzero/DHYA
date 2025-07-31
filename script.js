@@ -487,6 +487,11 @@ const ResourceTracker = (() => {
         i.userModified ? i.required : GAME_DATA.trainingPresets[i.tier][floors[i]]).join(',')}
     `);
     // +++ 日志结束 +++
+    console.log(`[修为切换验证] ${category} 
+  新修为: ${tier} 
+  进度保留: ${state.training[category].map(i => i.completed).join(',')}
+  新需求: ${state.training[category].map(i => i.required).join(',')}
+`);
     
     // 生成修为徽章（显示已完成+可完成次数） - 这部分不需要修改
     const completionBadges = [13, 15, 17].map(tier => {
@@ -736,19 +741,21 @@ const ResourceTracker = (() => {
     
     state.training[category] = state.training[category].map((item, index) => {
         const floor = floors[index];
-        const newRequired = GAME_DATA.trainingPresets[tier][floor];
-        
         return {
-            ...item,
-            completed: item.completed, // 保持原有完成次数
-            required: newRequired,
-            tier: parseInt(tier), // 确保是数字
-            userModified: false,  // 重置为用户未修改状态
-            calculatedCount: 0    // 重置计算结果
+            // 保持原有完成进度
+            completed: item.completed || 0,
+            // 更新为新的修为需求
+            required: GAME_DATA.trainingPresets[tier][floor],
+            // 保留用户自定义修改状态
+            userModified: item.userModified || false,
+            // 更新修为等级
+            tier: parseInt(tier),
+            // 保留计算结果
+            calculatedCount: item.calculatedCount ?? undefined
         };
     });
 
-    // 强制重新渲染历练部分
+    // 强制重新渲染并保存
     renderTraining();
     saveData();
 };
