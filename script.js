@@ -1021,12 +1021,15 @@ const TRAINING_DROPS = {
  
  // 计算指定历练层数需要的次数
 const calculateTrainingCount = (requirements, userMaterials, level, primaryMat) => {
-    // 计算缺口
-    const gap = Math.max(0, requirements[primaryMat] - (userMaterials[primaryMat] || 0));
+    // 严格检查材料缺口（包括NaN和无效值）
+    const available = parseInt(userMaterials[primaryMat]) || 0;
+    const gap = Math.max(0, requirements[primaryMat] - available);
     if (gap <= 0) return 0;
     
     // 根据历练层数获取每次掉落数量
     const dropsPerRun = TRAINING_DROPS[level].primary;
+    return Math.ceil(gap / dropsPerRun);
+};
     
     // 计算需要的次数（向上取整）
     const count = Math.ceil(gap / dropsPerRun);
@@ -1040,16 +1043,20 @@ const updateMaterialGaps = (requirements, userMaterials, level, count) => {
     const materials = TRAINING_RELATIONS[level];
     const drops = TRAINING_DROPS[level];
     
-    // 主材料扣除
-    if (requirements[materials[0]]) {
-        const totalDrops = count * drops.primary;
-        requirements[materials[0]] = Math.max(0, requirements[materials[0]] - totalDrops);
+    // 主材料扣除（严格类型检查）
+    if (materials[0] && requirements[materials[0]]) {
+        requirements[materials[0]] = Math.max(
+            0, 
+            requirements[materials[0]] - (count * drops.primary)
+        );
     }
     
-    // 副材料扣除
+    // 副材料扣除（特别是历练十二）
     if (materials[1] && requirements[materials[1]]) {
-        const totalDrops = count * drops.secondary;
-        requirements[materials[1]] = Math.max(0, requirements[materials[1]] - totalDrops);
+        requirements[materials[1]] = Math.max(
+            0, 
+            requirements[materials[1]] - (count * drops.secondary)
+        );
     }
 };
 
@@ -1105,83 +1112,52 @@ const applyToTraining = (category, counts) => {
 const calculateAndApply = () => {
     console.log('开始计算修为材料...');
     
+    // 1. 获取用户选择的属性和修为等级
     const attribute = dom.cultivationAttribute.value;
     const tier = parseInt(dom.cultivationTier.value);
     const category = attribute === 'yinYang' ? 'yinYang' : 
                     attribute === 'windFire' ? 'windFire' : 'earthWater';
     
-    // 获取用户输入的材料数量
+    // 2. 读取用户输入的材料数量（强制转换为数字）
     const userMaterials = {};
     const materialContainer = document.getElementById(`${attribute}-materials`);
     if (!materialContainer) {
-        console.error('找不到材料容器:', `${attribute}-materials`);
-        alert('错误：找不到对应的材料输入区域');
+        alert('错误：找不到材料输入区域');
         return;
     }
-    
-    const materialInputs = materialContainer.querySelectorAll('input');
-    materialInputs.forEach(input => {
+    materialContainer.querySelectorAll('input').forEach(input => {
         userMaterials[input.dataset.material] = parseInt(input.value) || 0;
     });
 
-    // 获取当前修为需求配置
+    // 3. 获取当前修为的材料需求配置
     const requirements = JSON.parse(JSON.stringify(
         MATERIAL_REQUIREMENTS[attribute][tier]
     ));
 
-    // 计算各层历练次数
+    // 4. 核心计算逻辑：从低层到高层计算历练次数
     const trainingCounts = {4:0, 6:0, 8:0, 10:0, 12:0};
     
-    // 从最低级材料开始计算（4层 → 12层）
-    // 1. 计算历练四（最低级材料）
-    trainingCounts[4] = calculateTrainingCount(
-        requirements, userMaterials, 4, 
-        TRAINING_RELATIONS[4][0]
-    );
-    updateMaterialGaps(requirements, userMaterials, 4, trainingCounts[4]);
-    
-    // 2. 计算历练六
-    trainingCounts[6] = calculateTrainingCount(
-        requirements, userMaterials, 6, 
-        TRAINING_RELATIONS[6][0]
-    );
-    updateMaterialGaps(requirements, userMaterials, 6, trainingCounts[6]);
-    
-    // 3. 计算历练八
-    trainingCounts[8] = calculateTrainingCount(
-        requirements, userMaterials, 8, 
-        TRAINING_RELATIONS[8][0]
-    );
-    updateMaterialGaps(requirements, userMaterials, 8, trainingCounts[8]);
-    
-    // 4. 计算历练十
-    trainingCounts[10] = calculateTrainingCount(
-        requirements, userMaterials, 10, 
-        TRAINING_RELATIONS[10][0]
-    );
-    updateMaterialGaps(requirements, userMaterials, 10, trainingCounts[10]);
-    
-    // 5. 计算历练十二（最高级材料）
-    trainingCounts[12] = calculateTrainingCount(
-        requirements, userMaterials, 12, 
-        TRAINING_RELATIONS[12][0]
-    );
-    updateMaterialGaps(requirements, userMaterials, 12, trainingCounts[12]);
-    
-    // 6. 如果有悲回风扇/星汉镜/木兰坠露需求，再计算历练十二
+    // === 关键修改点1：严格按层计算主材料 ===
+    [4, 6, 8, 10, 12].forEach(level => {
+        const primaryMat = TRAINING_RELATIONS[level][0];
+        trainingCounts[level] = calculateTrainingCount(
+            requirements, userMaterials, level, primaryMat
+        );
+        updateMaterialGaps(requirements, userMaterials, level, trainingCounts[level]);
+    });
+
+    // === 关键修改点2：特殊处理历练十二的副材料（取最大值）===
     if (requirements[TRAINING_RELATIONS[12][1]] > 0) {
-        const additionalCount = calculateTrainingCount(
-            requirements, userMaterials, 12, 
+        const secondaryCount = calculateTrainingCount(
+            requirements, userMaterials, 12,
             TRAINING_RELATIONS[12][1]
         );
-        trainingCounts[12] += additionalCount;
-        updateMaterialGaps(requirements, userMaterials, 12, additionalCount);
+        trainingCounts[12] = Math.max(trainingCounts[12], secondaryCount);
     }
-    
-    // 将计算结果存储在状态中
+
+    // 5. 更新状态
     const floors = [4, 6, 8, 10, 12];
     floors.forEach((floor, index) => {
-        // 确保存在对应的历练项
         if (!state.training[category][index]) {
             state.training[category][index] = {
                 completed: 0,
@@ -1190,25 +1166,20 @@ const calculateAndApply = () => {
                 tier: tier
             };
         }
-        
-        // 明确存储计算结果（包括0）
-        state.training[category][index].calculatedCount = trainingCounts[floor] || 0;
-        
-        // 如果计算结果为0，自动标记为已完成
-        if (trainingCounts[floor] === 0) {
-            state.training[category][index].completed = 
-                Math.max(state.training[category][index].completed, 0);
-        }
+        state.training[category][index].calculatedCount = trainingCounts[floor];
     });
 
+    // 6. 渲染界面
     renderTraining();
     
-    alert(`计算结果已更新显示：
-      历练四: ${trainingCounts[4]}次
-      历练六: ${trainingCounts[6]}次
-      历练八: ${trainingCounts[8]}次
-      历练十: ${trainingCounts[10]}次
-      历练十二: ${trainingCounts[12]}次`);
+    // 7. 优化结果显示：只显示需要打的历练
+    const activeCounts = Object.entries(trainingCounts)
+        .filter(([_, count]) => count > 0)
+        .map(([level, count]) => `历练${level}: ${count}次`);
+    
+    alert(activeCounts.length > 0 
+        ? `需要完成:\n${activeCounts.join('\n')}` 
+        : "🎉 全部材料已满足！");
 };
     // ==================== 工具函数 ====================
     /**
