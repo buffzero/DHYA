@@ -1330,7 +1330,7 @@ const migrateOldData = (savedData) => {
 return {
         init
     };
-}(); 
+})(); 
 // ==================== 初始化 ====================
 document.addEventListener('DOMContentLoaded', () => {
     if (!('localStorage' in window)) {
