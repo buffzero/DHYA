@@ -553,27 +553,27 @@ const ResourceTracker = (() => {
                     </div>
                     ${!isMet && displayRequired > 0 ? renderCircles(displayRequired, completed) : ''}
                     <div class="training-actions">
-                        <button class="consume-btn" 
-                            data-category="${category}" 
-                            data-index="${index}" 
-                            data-count="1"
-                            ${isMet ? 'disabled' : ''}>
-                            核销一次
-                        </button>
-                        <button class="consume-btn" 
-                            data-category="${category}" 
-                            data-index="${index}" 
-                            data-count="3"
-                            ${isMet || remaining < 3 ? 'disabled' : ''}>
-                            核销三次
-                        </button>
-                        <button class="consume-btn" 
-                            data-category="${category}" 
-                            data-index="${index}" 
-                            data-count="6"
-                            ${isMet || remaining < 6 ? 'disabled' : ''}>
-                            核销六次
-                        </button>
+                       <button class="consume-btn" 
+    data-category="${category}" 
+    data-index="${index}" 
+    data-count="1"
+    ${isMet ? 'disabled' : ''}>
+    核销一次
+</button>
+<button class="consume-btn" 
+    data-category="${category}" 
+    data-index="${index}" 
+    data-count="3"
+    ${remaining < 3 ? 'disabled' : ''}>
+    核销三次
+</button>
+<button class="consume-btn" 
+    data-category="${category}" 
+    data-index="${index}" 
+    data-count="6"
+    ${remaining < 6 ? 'disabled' : ''}>
+    核销六次
+</button>
                         <button class="consume-btn custom-consume" 
                             data-category="${category}" 
                             data-index="${index}">
@@ -650,55 +650,55 @@ const ResourceTracker = (() => {
 
     // 处理核销操作
     const handleConsume = (category, index, count) => {
-        const trainingItem = state.training[category][index];
-        const floor = [4, 6, 8, 10, 12][index];
-        
-        // 修复：使用正确的required值
-        const required = trainingItem.userModified ?
-            trainingItem.required :
-            GAME_DATA.trainingPresets[trainingItem.tier][floor];
+    const trainingItem = state.training[category][index];
+    const floor = [4, 6, 8, 10, 12][index];
     
-    // 计算剩余次数
-        const completed = trainingItem.completed || 0;
-        const remaining = Math.max(0, required - completed);
-        
-        if (isNaN(count) || count <= 0) {
-            alert('核销次数必须大于0');
-            return;
-        }
-        
-        if (count > remaining) {
-            alert(`核销次数不能超过剩余次数（${remaining}）`);
-            return;
-        }
-        
-        const actualCount = Math.min(count, remaining);
-        if (actualCount <= 0) return;
-        
-        // 记录操作历史
-        state.trainingHistory.push({
-            category,
-            index,
-            previousCount: completed,
-            count: actualCount,
-            timestamp: new Date().toISOString()
-        });
-        
-        // 更新状态
-        trainingItem.completed += actualCount;
+    // 使用正确的需求值（优先使用计算结果）
+    const displayRequired = trainingItem.calculatedCount !== undefined ? 
+        trainingItem.calculatedCount : 
+        (trainingItem.userModified ? trainingItem.required : GAME_DATA.trainingPresets[trainingItem.tier][floor]);
+    
+    // 计算剩余次数（使用displayRequired而不是基础required）
+    const completed = trainingItem.completed || 0;
+    const remaining = Math.max(0, displayRequired - completed);
+    
+    if (isNaN(count) || count <= 0) {
+        alert('核销次数必须大于0');
+        return;
+    }
+    
+    if (count > remaining) {
+        alert(`核销次数不能超过剩余次数（${remaining}）`);
+        return;
+    }
+    
+    const actualCount = Math.min(count, remaining);
+    if (actualCount <= 0) return;
+    
+    // 记录操作历史
+    state.trainingHistory.push({
+        category,
+        index,
+        previousCount: completed,
+        count: actualCount,
+        timestamp: new Date().toISOString()
+    });
+    
+    // 更新状态
+    trainingItem.completed += actualCount;
 
-        // 修复：确保更新修为完成记录
-        [13, 15, 17].forEach(tier => {
-            const totalAvailable = checkTrainingCompletion(category, tier);
-            const alreadyCompleted = state.trainingCompletions[category][tier] || 0;
-            
-            if (totalAvailable > alreadyCompleted) {
-                state.trainingCompletions[category][tier] = totalAvailable;
-            }
-        });
+    // 更新修为完成记录
+    [13, 15, 17].forEach(tier => {
+        const totalAvailable = checkTrainingCompletion(category, tier);
+        const alreadyCompleted = state.trainingCompletions[category][tier] || 0;
+        
+        if (totalAvailable > alreadyCompleted) {
+            state.trainingCompletions[category][tier] = totalAvailable;
+        }
+    });
 
-        updateAndSave();
-    };
+    updateAndSave();
+};
     
     // 处理撤销操作
     const handleUndo = (category, index) => {
