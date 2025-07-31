@@ -472,11 +472,21 @@ const ResourceTracker = (() => {
         renderTrainingCategory('windFire', dom.windFireTraining);
         renderTrainingCategory('earthWater', dom.earthWaterTraining);
     };
-
+          
     // 渲染单个历练类别
    const renderTrainingCategory = (category, container) => {
     const floors = [4, 6, 8, 10, 12];
     const categoryName = getCategoryName(category);
+    
+    // +++ 新增调试日志 +++
+    console.log(`渲染 ${category} 历练:
+      当前修为: ${state.training[category][0].tier}
+      计算结果: ${state.training[category].map(i => i.calculatedCount).join(',')}
+      完成次数: ${state.training[category].map(i => i.completed).join(',')}
+      需求次数: ${state.training[category].map(i => 
+        i.userModified ? i.required : GAME_DATA.trainingPresets[i.tier][floors[i]]).join(',')}
+    `);
+    // +++ 日志结束 +++
     
     // 生成修为徽章（显示已完成+可完成次数） - 这部分不需要修改
     const completionBadges = [13, 15, 17].map(tier => {
@@ -745,30 +755,38 @@ const ResourceTracker = (() => {
 
     // 一键撤销分类
     const handleResetCategory = (category) => {
-        if (!category || !state.training || !state.training[category]) {
-            console.error('无效的历练类别:', category);
-            return;
-        }
+    if (!category || !state.training || !state.training[category]) {
+        console.error('无效的历练类别:', category);
+        return;
+    }
 
-        if (confirm(`确定要重置【${getCategoryName(category)}】的所有进度吗？`)) {
-            if (Array.isArray(state.training[category])) {
-                state.training[category].forEach(item => {
-                    item.completed = 0;
-                    // 新增：清除计算结果
-                    if (item.calculatedCount) {
-                         delete item.calculatedCount;
-                     }
-                });
-                
-                // 清除相关历史记录
-                state.trainingHistory = state.trainingHistory.filter(
-                    record => record.category !== category
-                );
-                
-                updateAndSave();
-            }
-        }
-    };
+    if (confirm(`确定要重置【${getCategoryName(category)}】的所有进度吗？`)) {
+        const floors = [4, 6, 8, 10, 12];
+        
+        state.training[category] = state.training[category].map((item, index) => {
+            const floor = floors[index];
+            return {
+                // 保留当前修为等级
+                tier: item.tier,
+                // 重置为初始状态
+                completed: 0,
+                // 使用当前修为等级对应的预设值
+                required: GAME_DATA.trainingPresets[item.tier][floor],
+                // 清除所有修改状态
+                userModified: false,
+                // 关键修复：清除计算结果
+                calculatedCount: undefined
+            };
+        });
+        
+        // 清除相关历史记录
+        state.trainingHistory = state.trainingHistory.filter(
+            record => record.category !== category
+        );
+        
+        updateAndSave();
+    }
+};
 
     // 获取分类名称
     const getCategoryName = (category) => {
