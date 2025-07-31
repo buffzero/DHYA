@@ -1327,11 +1327,10 @@ const migrateOldData = (savedData) => {
     };
 
     // ==================== 公共接口 ====================
-return { 
-    init 
-};
-})();
-
+return {
+        init
+    };
+})(); 
 // ==================== 初始化 ====================
 document.addEventListener('DOMContentLoaded', () => {
     if (!('localStorage' in window)) {
