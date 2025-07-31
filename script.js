@@ -214,36 +214,30 @@ const ResourceTracker = (() => {
 
     // ==================== loadData 函数 ====================
     const loadData = () => {
-        try {
-            const saved = localStorage.getItem(CONFIG.storageKey);
-            if (!saved) return;
+    try {
+        const saved = localStorage.getItem(CONFIG.storageKey);
+        if (!saved) return;
 
-            const parsed = JSON.parse(saved);
-            
-            // 新增数据迁移处理
-            state.trainingCompletions = migrateOldData(parsed);
-            
-            // 修复：确保历练数据正确加载
-            const materials = {};
-            GAME_DATA.materials.forEach(material => {
-                materials[material.id] = parsed.materials?.[material.id] || false;
-            });
-
-            // 修复：确保历练数据正确合并
-             state = {
-            ...resetState(),
-            materials,
-            targetSelection: parsed.targetSelection || resetState().targetSelection,
-            trainingHistory: parsed.trainingHistory || [],
-            // 显式控制 training 和 trainingCompletions 的合并逻辑
-            training: {
-                yinYang: mergeTrainingData(parsed.training?.yinYang, 'yinYang'),
-                windFire: mergeTrainingData(parsed.training?.windFire, 'windFire'),
-                earthWater: mergeTrainingData(parsed.training?.earthWater, 'earthWater')
-            },
-            // 强制重置完成记录（除非需要保留历史）
-            trainingCompletions: resetState().trainingCompletions
+        const parsed = JSON.parse(saved);
+        
+        // 完全重置状态，只合并必要字段
+        const newState = resetState();
+        state = {
+            ...newState,
+            materials: Object.fromEntries(
+                GAME_DATA.materials.map(m => [m.id, parsed.materials?.[m.id] || false])
+            ),
+            targetSelection: parsed.targetSelection || newState.targetSelection,
+            trainingHistory: parsed.trainingHistory || []
         };
+
+        // 单独处理training数据
+        ['yinYang', 'windFire', 'earthWater'].forEach(category => {
+            state.training[category] = mergeTrainingData(
+                parsed.training?.[category], 
+                category
+            );
+        });
         
         updateLastUpdated();
     } catch (e) {
@@ -1209,28 +1203,24 @@ const migrateOldData = (savedData) => {
 
     // 重置初始化状态
     const resetState = () => {
-    // 初始化材料状态
-    const materials = {};
-    GAME_DATA.materials.forEach(material => {
-        materials[material.id] = false;
-    });
-    
-    // 初始化历练状态 - 确保所有字段正确初始化
     const initTraining = (category) => 
-    GAME_DATA.training[category].map(item => ({
-        completed: 0,
-        required: item.required,
-        userModified: false,
-        tier: item.tier || 17, // 确保有默认值
-        calculatedCount: 0
-    }));
-     
+        GAME_DATA.training[category].map(item => ({
+            completed: 0,
+            required: item.required,
+            userModified: false,
+            tier: item.tier || 17,
+            calculatedCount: 0  // 确保计算结果清零
+        }));
+
     return {
         moneyChecked: false,
         fragments: 0,
         scrolls: 0,
-        materials,
-        trainingCompletions: {  // 显式清零
+        materials: GAME_DATA.materials.reduce((acc, cur) => {
+            acc[cur.id] = false;
+            return acc;
+        }, {}),
+        trainingCompletions: {  // 完全重置完成记录
             yinYang: {13: 0, 15: 0, 17: 0},
             windFire: {13: 0, 15: 0, 17: 0},
             earthWater: {13: 0, 15: 0, 17: 0}
@@ -1241,27 +1231,13 @@ const migrateOldData = (savedData) => {
             earthWater: initTraining('earthWater')
         },
         targetSelection: {
-            classes: {
-                guidao: false,
-                shenji: false,
-                qihuang: false,
-                longdun: false,
-                pojun: false
-            },
-            attributes: {
-                yin: false,
-                yang: false,
-                feng: false,
-                huo: false,
-                di: false,
-                shui: false
-            }
+            classes: { guidao: false, shenji: false, qihuang: false, longdun: false, pojun: false },
+            attributes: { yin: false, yang: false, feng: false, huo: false, di: false, shui: false }
         },
         trainingHistory: [],
         lastUpdated: new Date().toISOString()
     };
 };
-
 
     // 初始化职业状态
     const getClassKey = (className) => {
