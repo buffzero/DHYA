@@ -252,24 +252,27 @@ const ResourceTracker = (() => {
 
     // 辅助函数：合并历练数据
     const mergeTrainingData = (savedData, category) => {
-        // 如果没有保存的数据，使用默认配置
-        if (!savedData) {
+    // 如果没有保存的数据，使用默认配置
+    if (!savedData) {
         return GAME_DATA.training[category].map((item, index) => {
             const floor = [4, 6, 8, 10, 12][index];
             return {
                 completed: 0,
-                required: GAME_DATA.trainingPresets[item.tier][floor], // 使用预设值
+                required: GAME_DATA.trainingPresets[item.tier][floor],
                 userModified: false,
-                tier: item.tier
+                tier: item.tier,
+                calculatedCount: 0 // 确保这个字段存在
             };
         });
     }
-        
-        return savedData.map((item, i) => ({
+    
+    // 处理保存的数据
+    return savedData.map((item, i) => ({
         completed: item.completed || 0,
         required: item.userModified ? item.required : GAME_DATA.training[category][i].required,
         userModified: item.userModified || false,
-        tier: item.tier || 17  // 确保tier有默认值
+        tier: item.tier || 17, // 默认17级修为
+        calculatedCount: item.calculatedCount || 0 // 确保这个字段存在
     }));
 };
     // 检查历练完成情况
@@ -532,9 +535,9 @@ const ResourceTracker = (() => {
             const baseRequired = GAME_DATA.trainingPresets[trainingItem.tier][floor];
             
             // 确定显示的需求次数（优先使用计算结果，其次用用户修改值，最后用预设值）
-            const displayRequired = trainingItem.calculatedCount !== undefined ? 
-                trainingItem.calculatedCount : 
-                (trainingItem.userModified ? trainingItem.required : baseRequired);
+const displayRequired = (trainingItem.calculatedCount !== undefined && trainingItem.calculatedCount !== null) ? 
+    trainingItem.calculatedCount : 
+    (trainingItem.userModified ? trainingItem.required : baseRequired);
             
             const completed = trainingItem.completed || 0;
             
@@ -1030,11 +1033,7 @@ const calculateTrainingCount = (requirements, userMaterials, level, primaryMat) 
     const dropsPerRun = TRAINING_DROPS[level].primary;
     return Math.ceil(gap / dropsPerRun);
 };
-    
-    // 计算需要的次数（向上取整）
-    const count = Math.ceil(gap / dropsPerRun);
-    return count;
-};
+   
 
 // 更新材料缺口（考虑主副材料）
 const updateMaterialGaps = (requirements, userMaterials, level, count) => {
@@ -1228,13 +1227,14 @@ const migrateOldData = (savedData) => {
     
     // 初始化历练状态 - 确保所有字段正确初始化
     const initTraining = (category) => 
-        GAME_DATA.training[category].map(item => ({
-            completed: 0,
-            required: item.required,
-            userModified: false,
-            tier: item.tier
-        }));
-
+    GAME_DATA.training[category].map(item => ({
+        completed: 0,
+        required: item.required,
+        userModified: false,
+        tier: item.tier || 17, // 确保有默认值
+        calculatedCount: 0
+    }));
+     
     return {
         moneyChecked: false,
         fragments: 0,
