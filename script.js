@@ -230,25 +230,27 @@ const ResourceTracker = (() => {
             });
 
             // 修复：确保历练数据正确合并
-            state = {
-                ...resetState(),
-                ...parsed,
-                materials,
-                targetSelection: parsed.targetSelection || resetState().targetSelection,
-                trainingHistory: parsed.trainingHistory || [],
-                training: {
-                    yinYang: mergeTrainingData(parsed.training?.yinYang, 'yinYang'),
-                    windFire: mergeTrainingData(parsed.training?.windFire, 'windFire'),
-                    earthWater: mergeTrainingData(parsed.training?.earthWater, 'earthWater')
-                }
-            };
-            
-            updateLastUpdated();
-        } catch (e) {
-            console.error('数据加载失败:', e);
-            state = resetState();
-        }
-    };
+             state = {
+            ...resetState(),
+            materials,
+            targetSelection: parsed.targetSelection || resetState().targetSelection,
+            trainingHistory: parsed.trainingHistory || [],
+            // 显式控制 training 和 trainingCompletions 的合并逻辑
+            training: {
+                yinYang: mergeTrainingData(parsed.training?.yinYang, 'yinYang'),
+                windFire: mergeTrainingData(parsed.training?.windFire, 'windFire'),
+                earthWater: mergeTrainingData(parsed.training?.earthWater, 'earthWater')
+            },
+            // 强制重置完成记录（除非需要保留历史）
+            trainingCompletions: resetState().trainingCompletions
+        };
+        
+        updateLastUpdated();
+    } catch (e) {
+        console.error('数据加载失败:', e);
+        state = resetState();
+    }
+};
 
     // 辅助函数：合并历练数据
     const mergeTrainingData = (savedData, category) => {
@@ -281,11 +283,12 @@ const ResourceTracker = (() => {
     let minCompletion = Infinity;
     
     floors.forEach((floor, index) => {
-        const required = GAME_DATA.trainingPresets[tier][floor];
-        const completed = state.training[category][index].completed;
+        const trainingItem = state.training[category][index];
+        const required = trainingItem.userModified 
+            ? trainingItem.required 
+            : GAME_DATA.trainingPresets[tier][floor];
         
-        // 计算完成轮数（整数部分）
-        const rounds = Math.floor(completed / required);
+        const rounds = Math.floor(trainingItem.completed / required);
         minCompletion = Math.min(minCompletion, rounds);
     });
     
@@ -481,27 +484,27 @@ const ResourceTracker = (() => {
     const floors = [4, 6, 8, 10, 12];
     const categoryName = getCategoryName(category);
     
-    // +++ 新增调试日志 +++
-    console.log(`渲染 ${category} 历练:
-      当前修为: ${state.training[category][0].tier}
-      计算结果: ${state.training[category].map(i => i.calculatedCount).join(',')}
-      完成次数: ${state.training[category].map(i => i.completed).join(',')}
-      需求次数: ${state.training[category].map(i => 
-        i.userModified ? i.required : GAME_DATA.trainingPresets[i.tier][floors[i]]).join(',')}
-    `);
-    
-    // 生成修为徽章（显示已完成+可完成次数） - 这部分不需要修改
+    // 调试日志：检查关键数据
+    console.log(`渲染 ${category} 历练数据:`, {
+        trainingItems: state.training[category],
+        completions: state.trainingCompletions[category],
+        calculatedCounts: state.training[category].map(i => i.calculatedCount)
+    });
+
+    // 生成修为徽章（显示已完成次数）
     const completionBadges = [13, 15, 17].map(tier => {
         const completed = state.trainingCompletions[category][tier] || 0;
-        const available = checkTrainingCompletion(category, tier) - completed;
+        // 关键修改：直接检查当前修为的实际完成情况，而不是依赖缓存
+        const currentProgress = checkTrainingCompletion(category, tier);
+        const available = Math.max(0, currentProgress - completed);
         
         if (completed > 0 || available > 0) {
             return `
                 <span class="completion-badge tier-${tier} 
-                      ${available > 0 ? 'available' : ''}"
-                      title="${categoryName}·修为${tier}：
-                      已完成 ${completed}次
-                      ${available > 0 ? `可领取 +${available}次` : ''}">
+                    ${available > 0 ? 'available' : ''}"
+                    title="${categoryName}·修为${tier}：
+                    已完成 ${completed}次
+                    ${available > 0 ? `可领取 +${available}次` : ''}">
                     ${tier}: ${completed}${available > 0 ? `(+${available})` : ''}
                 </span>
             `;
@@ -527,31 +530,22 @@ const ResourceTracker = (() => {
                 </div>
             </div>
         </div>
-       ${state.training[category].map((trainingItem, index) => {
-            const trainingConfig = GAME_DATA.training[category][index];
+        ${state.training[category].map((trainingItem, index) => {
             const floor = floors[index];
-            
-            // 获取基础需求次数
             const baseRequired = GAME_DATA.trainingPresets[trainingItem.tier][floor];
             
-            // 确定显示的需求次数（优先使用计算结果，其次用用户修改值，最后用预设值）
-const displayRequired = (trainingItem.calculatedCount !== undefined && trainingItem.calculatedCount !== null) ? 
-    trainingItem.calculatedCount : 
-    (trainingItem.userModified ? trainingItem.required : baseRequired);
+            // 关键修改：统一显示逻辑
+            const displayRequired = (trainingItem.calculatedCount !== undefined && trainingItem.calculatedCount !== null) 
+                ? trainingItem.calculatedCount 
+                : (trainingItem.userModified ? trainingItem.required : baseRequired);
             
             const completed = trainingItem.completed || 0;
-            
-            // 判断是否满足条件（计算结果为0或已完成次数≥需求次数）
             const isMet = displayRequired === 0 || completed >= displayRequired;
-            const displayStatus = isMet ? '已满足' : `${completed}/${displayRequired}`;
-            
-            // 计算剩余次数（仅在未满足时计算）
-            const remaining = isMet ? 0 : Math.max(0, displayRequired - completed);
             
             return `
                 <div class="training-item">
                     <div class="training-header">
-                        <div class="training-name">${trainingConfig.name}</div>
+                        <div class="training-name">${GAME_DATA.training[category][index].name}</div>
                         <div class="training-input-status">
                             <input type="text"
                                 class="training-count-input" 
@@ -559,11 +553,11 @@ const displayRequired = (trainingItem.calculatedCount !== undefined && trainingI
                                 data-index="${index}"
                                 value="${displayRequired}">
                             <div class="sub-status-indicator ${isMet ? 'met' : 'not-met'}">
-                                ${displayStatus}
+                                ${isMet ? '已满足' : `${completed}/${displayRequired}`}
                             </div>
                         </div>
                     </div>
-                    ${!isMet && displayRequired > 0 ? renderCircles(displayRequired, completed) : ''}
+                    ${!isMet ? renderCircles(displayRequired, completed) : ''}
                     <div class="training-actions">
                        <button class="consume-btn" 
     data-category="${category}" 
@@ -1240,7 +1234,7 @@ const migrateOldData = (savedData) => {
         fragments: 0,
         scrolls: 0,
         materials,
-        trainingCompletions: {  // 新增：确保清零
+        trainingCompletions: {  // 显式清零
             yinYang: {13: 0, 15: 0, 17: 0},
             windFire: {13: 0, 15: 0, 17: 0},
             earthWater: {13: 0, 15: 0, 17: 0}
