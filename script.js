@@ -198,54 +198,114 @@ const ResourceTracker = (() => {
      */
     const init = () => {
         console.log('🚀 密探资源系统启动...');
-        try {
-        setupDOM();
-        loadData();
-        renderAll();
-        updateMaterialInputsVisibility(); 
-        setupCultivationListeners();
-        setupEventListeners();
-            console.log('✅ 初始化完成');
-        } catch (error) {
-            console.error('初始化过程中出错:', error);
-            alert('系统初始化失败，请刷新页面重试');
-        }
-    };
+       try {
+    setupDOM();
+    loadData();
+    renderAll();
+    updateMaterialInputsVisibility(); 
+    setupCultivationListeners();
+    setupEventListeners();
+    console.log('✅ 初始化完成');
+} catch (error) {
+    console.error('初始化过程中出现错误:', error);
+    alert('系统初始化失败，请刷新页面重试\n错误详情请查看控制台(按F12)');
+    // 显示友好错误界面
+    document.body.innerHTML = `
+        <div style="padding:20px;color:red;font-family:sans-serif">
+            <h2>系统初始化失败</h2>
+            <p>${error.message}</p>
+            <button onclick="location.reload()" style="padding:8px 16px;">
+                点击刷新页面
+            </button>
+        </div>
+    `;
+}
 
     // ==================== loadData 函数 ====================
-    const loadData = () => {
+   const loadData = () => {
     try {
+        // 1. 尝试从本地存储读取数据
         const saved = localStorage.getItem(CONFIG.storageKey);
-        if (!saved) return;
+        if (!saved) {
+            console.log('无存档数据，使用默认状态');
+            state = resetState();
+            return;
+        }
 
-        const parsed = JSON.parse(saved);
-        
-        // 完全重置状态，只合并必要字段
-        const newState = resetState();
+        // 2. 安全解析数据
+        let parsed = {};
+        try {
+            parsed = JSON.parse(saved);
+            if (!parsed || typeof parsed !== 'object') {
+                throw new Error('存档数据格式无效');
+            }
+        } catch (parseError) {
+            console.error('解析存档数据失败:', parseError);
+            // 重建本地存储
+            localStorage.removeItem(CONFIG.storageKey); 
+            state = resetState();
+            return;
+        }
+
+        // 3. 获取基础重置状态
+        const baseState = resetState();
+
+        // 4. 安全合并数据（关键修复：避免旧数据污染）
         state = {
-            ...newState,
-            materials: Object.fromEntries(
-                GAME_DATA.materials.map(m => [m.id, parsed.materials?.[m.id] || false])
-            ),
-            targetSelection: parsed.targetSelection || newState.targetSelection,
-            trainingHistory: parsed.trainingHistory || []
+            // 基础重置状态
+            ...baseState,
+            
+            // 允许覆盖的字段
+            materials: safelyMergeMaterials(parsed.materials, baseState.materials),
+            targetSelection: parsed.targetSelection || baseState.targetSelection,
+            trainingHistory: Array.isArray(parsed.trainingHistory) 
+                ? parsed.trainingHistory 
+                : baseState.trainingHistory,
+            
+            // 特殊处理training数据（防止undefined污染）
+            training: {
+                yinYang: mergeTrainingData(parsed.training?.yinYang, 'yinYang') || baseState.training.yinYang,
+                windFire: mergeTrainingData(parsed.training?.windFire, 'windFire') || baseState.training.windFire,
+                earthWater: mergeTrainingData(parsed.training?.earthWater, 'earthWater') || baseState.training.earthWater
+            },
+            
+            // 强制重置完成记录（解决你反馈的问题）
+            trainingCompletions: { ...baseState.trainingCompletions }
         };
 
-        // 单独处理training数据
-        ['yinYang', 'windFire', 'earthWater'].forEach(category => {
-            state.training[category] = mergeTrainingData(
-                parsed.training?.[category], 
-                category
-            );
+        console.log('数据加载完成', { 
+            loadedMaterials: Object.keys(state.materials).length,
+            trainingStats: Object.keys(state.training).map(k => ({
+                category: k,
+                count: state.training[k].length
+            }))
         });
-        
+
         updateLastUpdated();
+
     } catch (e) {
-        console.error('数据加载失败:', e);
+        console.error('数据加载过程中出现严重错误:', e);
+        // 完全重置状态并重建存储
         state = resetState();
+        saveData(); 
+        alert('存档数据损坏，已重置为初始状态');
     }
 };
 
+// 辅助函数：安全合并材料数据
+const safelyMergeMaterials = (savedMaterials, defaultMaterials) => {
+    const merged = { ...defaultMaterials };
+    if (!savedMaterials || typeof savedMaterials !== 'object') {
+        return merged;
+    }
+
+    GAME_DATA.materials.forEach(material => {
+        if (material.id in savedMaterials) {
+            merged[material.id] = !!savedMaterials[material.id]; // 确保转换为布尔值
+        }
+    });
+    return merged;
+};
     // 辅助函数：合并历练数据
     const mergeTrainingData = (savedData, category) => {
     // 如果没有保存的数据，使用默认配置
@@ -285,63 +345,71 @@ const ResourceTracker = (() => {
 };
     // ==================== setupDOM 函数 ====================
     const setupDOM = () => {
-        try {
-            // 1. 检查主容器
-            dom.container = document.querySelector(CONFIG.containerId);
-            if (!dom.container) {
-                throw new Error('主容器 #resourceTracker 未找到');
-            }
-
-            // 2. 检查关键必需元素
-            const criticalElements = [
-                'classStatus', 
-                'attributeStatus',
-                'materialsList',
-                'moneyCheck',
-                'fragments',
-                'scrolls',
-                'cultivationAttribute',  // 新增
-                'cultivationTier',       // 新增
-                'calculateCultivation'   // 新增
-            ];
-            
-            criticalElements.forEach(key => {
-                const selector = CONFIG.elements[key];
-                dom[key] = document.querySelector(selector);
-                if (!dom[key]) {
-                    throw new Error(`关键元素 ${selector} 未找到`);
-                }
-            });
-
-            // 3. 初始化其他元素
-            Object.entries(CONFIG.elements).forEach(([key, selector]) => {
-                if (!criticalElements.includes(key)) {
-                    try {
-                        dom[key] = document.querySelector(selector);
-                        if (!dom[key] && key !== 'lastUpdated') {
-                            console.warn(`⚠️ 非关键元素未找到: ${selector}`);
-                        }
-                    } catch (error) {
-                        console.error(`初始化元素 ${selector} 失败:`, error);
-                    }
-                }
-            });
-
-        } catch (e) {
-            console.error('DOM初始化失败:', e);
-            document.body.innerHTML = `
-                <div style="color:red;padding:20px;font-family:sans-serif">
-                    <h2>系统初始化失败</h2>
-                    <p>${e.message}</p>
-                    <button onclick="location.reload()" style="padding:8px 16px;margin-top:10px;">
-                        刷新页面
-                    </button>
-                </div>
-            `;
-            throw e;
+    try {
+        // 1. 检查主容器（必须存在）
+        dom.container = document.querySelector(CONFIG.containerId);
+        if (!dom.container) {
+            throw new Error(`主容器 ${CONFIG.containerId} 未找到 - 请检查HTML是否包含该元素`);
         }
-    };
 
+        // 2. 定义关键元素列表（与CONFIG.elements保持一致）
+        const criticalElements = [
+            'classStatus', 'attributeStatus', 'materialsList',
+            'moneyCheck', 'fragments', 'scrolls', 
+            'cultivationAttribute', 'cultivationTier', 'calculateCultivation',
+            // 新增历练容器检查
+            'yinYangTraining', 'windFireTraining', 'earthWaterTraining'
+        ];
+
+        // 3. 初始化所有元素（关键元素+非关键元素）
+        Object.entries(CONFIG.elements).forEach(([key, selector]) => {
+            try {
+                dom[key] = document.querySelector(selector);
+                
+                // 关键元素检查
+                if (criticalElements.includes(key)) {
+                    if (!dom[key]) {
+                        throw new Error(`[关键元素] ${selector} 未找到`);
+                    }
+                } 
+                // 非关键元素警告
+                else if (!dom[key] && key !== 'lastUpdated') {
+                    console.warn(`[非关键元素] ${selector} 未找到`);
+                }
+            } catch (error) {
+                console.error(`元素初始化失败 ${key}:`, error);
+                if (criticalElements.includes(key)) throw error;
+            }
+        });
+
+        // 4. 额外验证：确保历练容器已正确初始化
+        ['yinYangTraining', 'windFireTraining', 'earthWaterTraining'].forEach(key => {
+            if (!dom[key]) {
+                throw new Error(`历练容器 ${CONFIG.elements[key]} 初始化失败`);
+            }
+        });
+
+    } catch (e) {
+        console.error('DOM初始化失败:', e);
+        // 友好错误界面（包含更多调试信息）
+        document.body.innerHTML = `
+            <div style="color:red;padding:20px;font-family:sans-serif">
+                <h2>页面加载失败</h2>
+                <p>${e.message}</p>
+                <p>缺少必需元素，请检查：</p>
+                <ul>
+                    ${criticalElements.map(el => 
+                        `<li>${el}: ${CONFIG.elements[el]}</li>`
+                    ).join('')}
+                </ul>
+                <button onclick="location.reload()" style="padding:8px 16px;margin-top:15px;">
+                    刷新页面
+                </button>
+            </div>
+        `;
+        throw e; // 终止初始化流程
+    }
+};
     // ==================== 渲染函数 ====================
 
     // 渲染整个界面
@@ -470,11 +538,18 @@ const ResourceTracker = (() => {
           
     // 渲染单个历练类别
    const renderTrainingCategory = (category, container) => {
+    if (!container) {
+        console.error(`渲染容器未找到: ${category}`);
+        return;
+    }
+    
+    // 确保这些变量在最开始定义
+    const categoryName = getCategoryName(category); 
     const floors = [4, 6, 8, 10, 12];
     
     // 调试日志
-    console.log(`重置后${category}数据:`, {
-        training: state.training[category],
+    console.log(`开始渲染${categoryName}`, {
+        trainingData: state.training[category],
         completions: state.trainingCompletions[category]
     });
 
@@ -778,13 +853,13 @@ const ResourceTracker = (() => {
 
     // 获取分类名称
     const getCategoryName = (category) => {
-        const names = {
-            yinYang: '阴阳历练',
-            windFire: '风火历练', 
-            earthWater: '地水历练'
-        };
-        return names[category] || category;
+    const names = {
+        yinYang: '阴阳历练',
+        windFire: '风火历练', 
+        earthWater: '地水历练'
     };
+    return names[category] || category || '未知历练';
+};
 
     // ==================== 事件处理 ====================
     const setupEventListeners = () => {
