@@ -263,11 +263,12 @@ const ResourceTracker = (() => {
                 : baseState.trainingHistory,
             
             // 特殊处理training数据（防止undefined污染）
-            training: {
-                yinYang: mergeTrainingData(parsed.training?.yinYang, 'yinYang') || baseState.training.yinYang,
-                windFire: mergeTrainingData(parsed.training?.windFire, 'windFire') || baseState.training.windFire,
-                earthWater: mergeTrainingData(parsed.training?.earthWater, 'earthWater') || baseState.training.earthWater
-            },
+            // 修正后
+training: {
+    yinYang: mergeTrainingData(parsed.training?.yinYang, baseState.training.yinYang) || baseState.training.yinYang,
+    windFire: mergeTrainingData(parsed.training?.windFire, baseState.training.windFire) || baseState.training.windFire,
+    earthWater: mergeTrainingData(parsed.training?.earthWater, baseState.training.earthWater) || baseState.training.earthWater
+},
             
             // 强制重置完成记录（解决你反馈的问题）
             trainingCompletions: { ...baseState.trainingCompletions }
@@ -307,20 +308,20 @@ const safelyMergeMaterials = (savedMaterials, defaultMaterials) => {
     return merged;
 };
     // 辅助函数：合并历练数据
-    const mergeTrainingData = (savedData, category) => {
-    // 如果没有保存的数据，使用默认配置
-    if (!savedData) {
-        return GAME_DATA.training[category].map((item, index) => {
-            const floor = [4, 6, 8, 10, 12][index];
-            return {
-                completed: 0,
-                required: GAME_DATA.trainingPresets[item.tier][floor],
-                userModified: false,
-                tier: item.tier,
-                calculatedCount: 0 // 确保这个字段存在
-            };
-        });
-    }
+    const mergeTrainingData = (savedData, defaultData) => {
+    if (!savedData) return defaultData;
+    
+    return savedData.map((item, index) => {
+        const defaultItem = defaultData[index] || {};
+        return {
+            completed: item.completed || 0,
+            required: item.userModified ? item.required : defaultItem.required,
+            userModified: item.userModified || false,
+            tier: item.tier || defaultItem.tier || 17,
+            calculatedCount: item.calculatedCount || 0
+        };
+    });
+};
     
     // 处理保存的数据
     return savedData.map((item, i) => ({
