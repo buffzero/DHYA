@@ -1143,14 +1143,17 @@ const TRAINING_DROPS = {
 };
  
  // 计算指定历练层数需要的次数
-const calculateTrainingCount = (requirements, userMaterials, level, primaryMat) => {
-    // 严格检查材料缺口（包括NaN和无效值）
-    const available = parseInt(userMaterials[primaryMat]) || 0;
-    const gap = Math.max(0, requirements[primaryMat] - available);
-    if (gap <= 0) return 0;
+const calculateTrainingCount = (requirements, userMaterials, level, material) => {
+    // 获取可用材料量（处理NaN）
+    const available = parseInt(userMaterials[material]) || 0;
     
-    // 根据历练层数获取每次掉落数量
+    // 计算实际缺口（不能为负数）
+    const gap = Math.max(0, requirements[material] - available);
+    
+    // 获取历练掉落量
     const dropsPerRun = TRAINING_DROPS[level].primary;
+    
+    // 计算需要次数（向上取整）
     return Math.ceil(gap / dropsPerRun);
 };
    
@@ -1257,7 +1260,7 @@ const calculateAndApply = () => {
      // 4. 计算历练次数
     const trainingCounts = {4:0, 6:0, 8:0, 10:0, 12:0};
     
-    // 从低层到高层计算
+    // 从低层到高层计算（4,6,8,10）
     [4, 6, 8, 10].forEach(level => {
         const primaryMat = TRAINING_RELATIONS[level][0];
         trainingCounts[level] = calculateTrainingCount(
@@ -1290,14 +1293,18 @@ const calculateAndApply = () => {
     // 5. 更新状态
     const floors = [4, 6, 8, 10, 12];
     floors.forEach((floor, index) => {
-        const count = trainingCounts[floor];
+        // 确保状态对象存在
+        if (!state.training[category][index]) {
+            state.training[category][index] = {
+                completed: 0,
+                required: GAME_DATA.trainingPresets[tier][floor],
+                userModified: false,
+                tier: tier
+            };
+        }
         
-        // 更新状态对象（保留完成进度）
-        state.training[category][index] = {
-            ...state.training[category][index], // 保留原有属性
-            calculatedCount: count,             // 设置计算结果
-            userModified: false                 // 重置用户修改标记
-        };
+        // 更新状态
+        state.training[category][index].calculatedCount = trainingCounts[floor];
     });
 
     // 6. 保存数据并重新渲染
