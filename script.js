@@ -123,6 +123,25 @@ const ResourceTracker = (() => {
         }).replace(/\//g, '-');
     };
  
+      // 统一的需求计算函数
+const getActualRequired = (trainingItem, floor) => {
+    const tier = trainingItem.tier || 17;
+    
+    // 1. 优先使用计算值
+    if (trainingItem.calculatedCount !== null && 
+        trainingItem.calculatedCount !== undefined) {
+        return trainingItem.calculatedCount;
+    }
+    
+    // 2. 使用用户修改值
+    if (trainingItem.userModified) {
+        return trainingItem.required;
+    }
+    
+    // 3. 使用预设值
+    return GAME_DATA.trainingPresets[tier][floor];
+};
+ 
     // 新增职业键名映射函数
     const getClassKey = (className) => {
         const map = {
@@ -601,19 +620,18 @@ training: {
 
     // 渲染所有历练类别
     const renderTrainingCategory = (category, container) => {
-     
     // 添加容错检查
-  if (!container) {
-    console.error(`渲染容器未找到: ${category}`);
-    return;
-  }
-  
-  if (!state.training[category]) {
-    console.error(`历练数据未找到: ${category}`);
-    container.innerHTML = `<div class="error">数据加载错误，请刷新页面</div>`;
-    return;
-  }
-     
+    if (!container) {
+        console.error(`渲染容器未找到: ${category}`);
+        return;
+    }
+    
+    if (!state.training[category]) {
+        console.error(`历练数据未找到: ${category}`);
+        container.innerHTML = `<div class="error">数据加载错误，请刷新页面</div>`;
+        return;
+    }
+    
     // 获取分类名称（如"地水历练"）
     const categoryName = getCategoryName(category); 
     const floors = [4, 6, 8, 10, 12];
@@ -660,18 +678,12 @@ training: {
         ${state.training[category].map((trainingItem, index) => {
             const floor = floors[index];
             
-            // 关键修复：优先使用计算结果作为实际需求
-        const actualRequired = trainingItem.calculatedCount !== undefined && 
-                              trainingItem.calculatedCount !== null
-            ? trainingItem.calculatedCount
-            : trainingItem.userModified 
-                ? trainingItem.required 
-                : GAME_DATA.trainingPresets[trainingItem.tier || 17][floor];
-                
-        const completed = trainingItem.completed || 0;
-        const isMet = completed >= actualRequired;
-        const remaining = isMet ? 0 : Math.max(0, actualRequired - completed);
-
+            // 使用统一函数计算实际需求 - 替换原有逻辑
+            const actualRequired = getActualRequired(trainingItem, floor);
+            
+            const completed = trainingItem.completed || 0;
+            const isMet = completed >= actualRequired;
+            const remaining = isMet ? 0 : Math.max(0, actualRequired - completed);
 
             return `
             <div class="training-item">
@@ -682,54 +694,53 @@ training: {
                             class="training-count-input" 
                             data-category="${category}" 
                             data-index="${index}"
-                            value="${actualRequired}"> <!-- 显示实际需求 -->
+                            value="${actualRequired}">
                         <div class="sub-status-indicator ${isMet ? 'met' : 'not-met'}">
                             ${isMet ? '已满足' : `${completed}/${actualRequired}`}
                         </div>
                     </div>
                 </div>
-                <!-- 始终显示圆圈 -->
                 ${renderCircles(actualRequired, completed)}
                 <div class="training-actions">
-                        <button class="consume-btn" 
-                            data-category="${category}" 
-                            data-index="${index}" 
-                            data-count="1"
-                            ${isMet ? 'disabled' : ''}>
-                            核销一次
-                        </button>
-                        <button class="consume-btn" 
-                            data-category="${category}" 
-                            data-index="${index}" 
-                            data-count="3"
-                            ${remaining < 3 ? 'disabled' : ''}>
-                            核销三次
-                        </button>
-                        <button class="consume-btn" 
-                            data-category="${category}" 
-                            data-index="${index}" 
-                            data-count="6"
-                            ${remaining < 6 ? 'disabled' : ''}>
-                            核销六次
-                        </button>
-                        <button class="consume-btn custom-consume" 
-                            data-category="${category}" 
-                            data-index="${index}">
-                            核销指定次数
-                        </button>
-                        <input type="number" min="1" max="${remaining}" 
-                            class="custom-consume-input" 
-                            data-category="${category}" 
-                            data-index="${index}"
-                            placeholder="次数">
-                        <button class="undo-btn" 
-                            data-category="${category}" 
-                            data-index="${index}"
-                            ${completed <= 0 ? 'disabled' : ''}>
-                            撤销
-                        </button>
-                    </div>
+                    <button class="consume-btn" 
+                        data-category="${category}" 
+                        data-index="${index}" 
+                        data-count="1"
+                        ${isMet ? 'disabled' : ''}>
+                        核销一次
+                    </button>
+                    <button class="consume-btn" 
+                        data-category="${category}" 
+                        data-index="${index}" 
+                        data-count="3"
+                        ${remaining < 3 ? 'disabled' : ''}>
+                        核销三次
+                    </button>
+                    <button class="consume-btn" 
+                        data-category="${category}" 
+                        data-index="${index}" 
+                        data-count="6"
+                        ${remaining < 6 ? 'disabled' : ''}>
+                        核销六次
+                    </button>
+                    <button class="consume-btn custom-consume" 
+                        data-category="${category}" 
+                        data-index="${index}">
+                        核销指定次数
+                    </button>
+                    <input type="number" min="1" max="${remaining}" 
+                        class="custom-consume-input" 
+                        data-category="${category}" 
+                        data-index="${index}"
+                        placeholder="次数">
+                    <button class="undo-btn" 
+                        data-category="${category}" 
+                        data-index="${index}"
+                        ${completed <= 0 ? 'disabled' : ''}>
+                        撤销
+                    </button>
                 </div>
+            </div>
             `;
         }).join('')}
     `;
@@ -739,13 +750,10 @@ training: {
 };
  
     // 渲染圆圈进度
-   const renderCircles = (required, completed) => {
-    // 即使需求为0也显示圆圈
-    if (required <= 0) required = 0;
+    // 确保至少显示1个圆圈
+    const totalCircles = required <= 0 ? 1 : required;
     
     let circlesHTML = '';
-    const totalCircles = Math.max(required, completed); // 确保显示所有圆圈
-    
     // 已完成的蓝色圆圈
     for (let i = 0; i < Math.min(completed, totalCircles); i++) {
         circlesHTML += `<div class="circle filled"></div>`;
@@ -797,18 +805,10 @@ training: {
     const handleConsume = (category, index, count) => {
     const trainingItem = state.training[category][index];
     const floor = [4, 6, 8, 10, 12][index];
-    
-    // 安全访问预设值
     const tier = trainingItem.tier || 17;
-    const presetRequired = GAME_DATA.trainingPresets[tier]?.[floor] || 1;
     
-    // 使用实际需求值
-    const actualRequired = (trainingItem.calculatedCount !== undefined && 
-                          trainingItem.calculatedCount !== null)
-        ? trainingItem.calculatedCount
-        : trainingItem.userModified 
-            ? trainingItem.required 
-            : presetRequired;
+    // 使用统一的需求计算函数
+    const actualRequired = getActualRequired(trainingItem, floor);
     
     const completed = trainingItem.completed || 0;
     const remaining = Math.max(0, actualRequired - completed);
@@ -1271,11 +1271,10 @@ const calculateAndApply = () => {
     floors.forEach((floor, index) => {
         const count = trainingCounts[floor];
         
-        // 更新状态对象
+        // 更新状态对象（保留完成进度）
         state.training[category][index] = {
             ...state.training[category][index], // 保留原有属性
             calculatedCount: count,             // 设置计算结果
-            completed: 0,                      // 重置完成次数
             userModified: false                 // 重置用户修改标记
         };
     });
@@ -1349,7 +1348,7 @@ const migrateOldData = (savedData) => {
       required: GAME_DATA.trainingPresets[17][floor],
       userModified: false,
       tier: 17,
-      calculatedCount: 0
+      calculatedCount: null
     }));
   
 
