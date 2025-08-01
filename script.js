@@ -266,22 +266,51 @@ const safelyMergeMaterials = (savedMaterials, defaultMaterials) => {
     const init = () => {
     console.log('🚀 密探资源系统启动...');
     try {
-        // 核心函数存在性检查
-        const requiredFunctions = ['setupDOM', 'loadData', 'renderAll'];
-        requiredFunctions.forEach(func => {
-            if (typeof eval(func) !== 'function') { // 注意：eval仅用于演示，实际应避免
-                throw new Error(`核心函数 ${func} 未定义`);
-            }
-        });
-
-        setupDOM();  // 1. 初始化DOM
-        loadData();  // 2. 加载数据
-        renderAll(); // 3. 渲染界面
+        // 1. 初始化DOM引用
+        setupDOM();
+        
+        // 2. 加载保存的数据
+        loadData();
+        
+        // 3. 渲染所有界面
+        renderAll();
+        
+        // 4. 绑定全局事件
+        setupEventListeners();
+        
+        // 5. 新增：绑定修为材料计算事件
+        setupCultivationListeners();
+        
+        // 6. 新增：初始绑定历练容器事件
+        if (dom.yinYangTraining) bindTrainingEvents(dom.yinYangTraining);
+        if (dom.windFireTraining) bindTrainingEvents(dom.windFireTraining);
+        if (dom.earthWaterTraining) bindTrainingEvents(dom.earthWaterTraining);
         
         console.log('✅ 初始化成功');
     } catch (error) {
         console.error('初始化失败:', error);
         alert(`系统初始化失败: ${error.message}\n请检查控制台`);
+    }
+};
+ // 新增函数：绑定修为材料事件
+const setupCultivationListeners = () => {
+    try {
+        // 确保DOM元素已加载
+        if (!dom.cultivationAttribute || !dom.cultivationTier || !dom.calculateCultivation) {
+            console.error('修为材料相关DOM元素未找到');
+            return;
+        }
+
+        // 初始显示风火材料
+        updateMaterialInputsVisibility();
+
+        // 事件监听
+        dom.cultivationAttribute.addEventListener('change', updateMaterialInputsVisibility);
+        
+        // 关键修复：确保绑定计算按钮事件
+        dom.calculateCultivation.addEventListener('click', calculateAndApply);
+    } catch (error) {
+        console.error('初始化修为材料监听失败:', error);
     }
 };
     // ==================== loadData 函数 ====================
@@ -557,7 +586,7 @@ training: {
     // 获取分类名称（如"地水历练"）
     const categoryName = getCategoryName(category); 
     const floors = [4, 6, 8, 10, 12];
-    const currentTier = state.training[category][0]?.tier || 17; // 默认修为17阶
+    const currentTier = state.training[category][0]?.tier || 17;
 
     // 生成修为徽章（显示各阶完成情况）
     const completionBadges = [13, 15, 17].map(tier => {
@@ -597,25 +626,24 @@ training: {
                 </div>
             </div>
         </div>
-         ${state.training[category].map((trainingItem, index) => {
+        ${state.training[category].map((trainingItem, index) => {
             const floor = floors[index];
             
-            // 关键修复：正确获取需求值
-            // 1. 优先显示计算值
-            const displayRequired = (trainingItem.calculatedCount !== undefined && trainingItem.calculatedCount !== null)
-                ? trainingItem.calculatedCount
-                : (trainingItem.userModified 
-                    ? trainingItem.required 
-                    : GAME_DATA.trainingPresets[trainingItem.tier][floor]);
+            // 关键修复点：三重取值逻辑
+            const displayRequired = (
+                trainingItem.calculatedCount !== undefined && 
+                trainingItem.calculatedCount !== null
+            ) ? trainingItem.calculatedCount
+              : trainingItem.userModified 
+                ? trainingItem.required 
+                : GAME_DATA.trainingPresets[trainingItem.tier][floor];
             
-            // 2. 实际需求值（用于判断是否满足）
+            // 实际判断标准（不考虑calculatedCount）
             const actualRequired = trainingItem.userModified 
                 ? trainingItem.required 
                 : GAME_DATA.trainingPresets[trainingItem.tier][floor];
                 
             const completed = trainingItem.completed || 0;
-            
-            // 正确判断是否满足条件
             const isMet = completed >= actualRequired;
             const remaining = isMet ? 0 : Math.max(0, actualRequired - completed);
 
@@ -630,11 +658,11 @@ training: {
                                 data-index="${index}"
                                 value="${displayRequired}">
                             <div class="sub-status-indicator ${isMet ? 'met' : 'not-met'}">
-                                ${isMet ? '已满足' : `${completed}/${displayRequired}`}
+                                ${isMet ? '已满足' : `${completed}/${actualRequired}`}
                             </div>
                         </div>
                     </div>
-                    ${!isMet ? renderCircles(displayRequired, completed) : ''}
+                    ${!isMet ? renderCircles(actualRequired, completed) : ''}
                     <div class="training-actions">
                         <button class="consume-btn" 
                             data-category="${category}" 
@@ -678,7 +706,11 @@ training: {
             `;
         }).join('')}
     `;
+
+    // 关键：必须重新绑定事件！
+    bindTrainingEvents(container);
 };
+ 
     // 渲染圆圈进度
    const renderCircles = (required, completed) => {
     if (required <= 0) return ''; // 计算结果为0时不显示圆圈
@@ -1120,7 +1152,6 @@ const updateMaterialGaps = (requirements, userMaterials, level, count) => {
     }
 };
 
- // 应用计算结果到历练
 // 应用计算结果到历练
 const applyToTraining = (category, counts) => {
     console.log('应用计算结果到历练:', category, counts);
@@ -1181,11 +1212,17 @@ const calculateAndApply = () => {
     // 2. 读取用户输入的材料数量
     const userMaterials = {};
     const materialContainer = document.getElementById(`${attribute}-materials`);
+    if (!materialContainer) {
+        alert('错误：找不到材料输入区域');
+        return;
+    }
+    
+    // 收集所有输入值
     materialContainer.querySelectorAll('input').forEach(input => {
         userMaterials[input.dataset.material] = parseInt(input.value) || 0;
     });
 
-    // 3. 获取材料需求配置
+    // 3. 获取当前修为的材料需求配置
     const requirements = JSON.parse(JSON.stringify(
         MATERIAL_REQUIREMENTS[attribute][tier]
     ));
@@ -1193,6 +1230,7 @@ const calculateAndApply = () => {
     // 4. 计算历练次数
     const trainingCounts = {4:0, 6:0, 8:0, 10:0, 12:0};
     
+    // 从低层到高层计算
     [4, 6, 8, 10, 12].forEach(level => {
         const primaryMat = TRAINING_RELATIONS[level][0];
         trainingCounts[level] = calculateTrainingCount(
@@ -1201,7 +1239,7 @@ const calculateAndApply = () => {
         updateMaterialGaps(requirements, userMaterials, level, trainingCounts[level]);
     });
 
-    // 特殊处理历练十二
+    // 特殊处理历练十二的副材料
     if (requirements[TRAINING_RELATIONS[12][1]] > 0) {
         const secondaryCount = calculateTrainingCount(
             requirements, userMaterials, 12,
@@ -1213,6 +1251,7 @@ const calculateAndApply = () => {
     // 5. 更新状态
     const floors = [4, 6, 8, 10, 12];
     floors.forEach((floor, index) => {
+        // 确保状态对象存在
         if (!state.training[category][index]) {
             state.training[category][index] = {
                 completed: 0,
@@ -1221,18 +1260,20 @@ const calculateAndApply = () => {
                 tier: tier
             };
         }
+        
         // 设置计算结果
         state.training[category][index].calculatedCount = trainingCounts[floor];
     });
 
-    // === 修复点 ===
-    // 6. 重新渲染相关历练类别
+    // 6. 保存数据并重新渲染
+    saveData();
+    
+    // 7. 重新渲染对应历练类别
     if (dom[`${category}Training`]) {
         renderTrainingCategory(category, dom[`${category}Training`]);
     }
-    // ==============
-
-    // 7. 显示优化结果
+    
+    // 8. 显示结果
     const activeCounts = Object.entries(trainingCounts)
         .filter(([_, count]) => count > 0)
         .map(([level, count]) => `历练${level}: ${count}次`);
@@ -1241,6 +1282,7 @@ const calculateAndApply = () => {
         ? `需要完成:\n${activeCounts.join('\n')}` 
         : "🎉 全部材料已满足！");
 };
+
     // ==================== 工具函数 ====================
     /**
  * 兼容旧版数据迁移
@@ -1248,7 +1290,6 @@ const calculateAndApply = () => {
  */
  // 更新材料输入区域可见性
 
- 
 const migrateOldData = (savedData) => {
     // 添加参数检查
     if (!savedData || typeof savedData !== 'object') {
@@ -1324,7 +1365,52 @@ const migrateOldData = (savedData) => {
         lastUpdated: new Date().toISOString()
     };
 };
+ 
+     const bindTrainingEvents = (container) => {
+        // 绑定核销按钮
+        container.querySelectorAll('.consume-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const category = e.target.dataset.category;
+                const index = parseInt(e.target.dataset.index);
+                let count;
+                
+                if (e.target.classList.contains('custom-consume')) {
+                    const input = e.target.nextElementSibling;
+                    count = parseInt(input.value) || 0;
+                } else {
+                    count = parseInt(e.target.dataset.count) || 1;
+                }
+                
+                if (count > 0) {
+                    handleConsume(category, index, count);
+                }
+            });
+        });
+        
+        // 绑定撤销按钮
+        container.querySelectorAll('.undo-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const category = e.target.dataset.category;
+                const index = parseInt(e.target.dataset.index);
+                handleUndo(category, index);
+            });
+        });
+        
+        // 绑定一键撤销分类按钮
+        container.querySelectorAll('.reset-category-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                handleResetCategory(e.target.dataset.category);
+            });
+        });
 
+        // 绑定修为切换
+        container.querySelectorAll('.tier-select').forEach(select => {
+            select.addEventListener('change', (e) => {
+                handleTierChange(e.target.dataset.category, parseInt(e.target.value));
+            });
+        });
+    };
+ 
     // ==================== 公共接口 ====================
 return {
         init
