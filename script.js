@@ -76,25 +76,25 @@ const ResourceTracker = (() => {
         // 历练配置
         training: {
             windFire: [
-                { name: '【历练·四】', required: 6, editable: true, tier: 17 },
-                { name: '【历练·六】', required: 12, editable: true, tier: 17 },
-                { name: '【历练·八】', required: 24, editable: true, tier: 17 },
-                { name: '【历练·十】', required: 35, editable: true, tier: 17 },
-                { name: '【历练·十二】', required: 47, editable: true, tier: 17 }
+                { name: '【历练·四】'},
+                { name: '【历练·六】'},
+                { name: '【历练·八】'},
+                { name: '【历练·十】'},
+                { name: '【历练·十二】'}
             ],
             earthWater: [
-                { name: '【历练·四】', required: 6, editable: true, tier: 17 },
-                { name: '【历练·六】', required: 12, editable: true, tier: 17 },
-                { name: '【历练·八】', required: 24, editable: true, tier: 17 },
-                { name: '【历练·十】', required: 35, editable: true, tier: 17 },
-                { name: '【历练·十二】', required: 47, editable: true, tier: 17 }
+                { name: '【历练·四】'},
+                { name: '【历练·六】'},
+                { name: '【历练·八】'},
+                { name: '【历练·十】'},
+                { name: '【历练·十二】'}
             ],
             yinYang: [
-                { name: '【历练·四】', required: 6, editable: true, tier: 17 },
-                { name: '【历练·六】', required: 12, editable: true, tier: 17 },
-                { name: '【历练·八】', required: 24, editable: true, tier: 17 },
-                { name: '【历练·十】', required: 35, editable: true, tier: 17 },
-                { name: '【历练·十二】', required: 47, editable: true, tier: 17 }
+                { name: '【历练·四】'},
+                { name: '【历练·六】'},
+                { name: '【历练·八】'},
+                { name: '【历练·十】'},
+                { name: '【历练·十二】'}
             ]
         },
         trainingPresets: {
@@ -213,23 +213,26 @@ const safelyMergeMaterials = (savedMaterials, defaultMaterials) => {
         },
         // 历练进度
        training: {
-            yinYang: GAME_DATA.training.yinYang.map(item => ({
-                completed: 0,
-                required: item.required,
-                userModified: false,
-                tier: item.tier  // 使用GAME_DATA中的默认值
-            })),
-            windFire: GAME_DATA.training.windFire.map(item => ({
-                completed: 0,
-                required: item.required,
-                userModified: false,
-                tier: item.tier  // 使用GAME_DATA中的默认值
-            })),
-            earthWater: GAME_DATA.training.earthWater.map(item => ({
-                completed: 0,
-                required: item.required,
-                userModified: false,
-                tier: item.tier  // 使用GAME_DATA中的默认值
+    yinYang: [4, 6, 8, 10, 12].map(floor => ({
+      completed: 0,
+      required: GAME_DATA.trainingPresets[17][floor],
+      userModified: false,
+      tier: 17,
+      calculatedCount: 0
+    })),
+    windFire: [4, 6, 8, 10, 12].map(floor => ({
+      completed: 0,
+      required: GAME_DATA.trainingPresets[17][floor],
+      userModified: false,
+      tier: 17,
+      calculatedCount: 0
+    })),
+    earthWater: [4, 6, 8, 10, 12].map(floor => ({
+      completed: 0,
+      required: GAME_DATA.trainingPresets[17][floor],
+      userModified: false,
+      tier: 17,
+      calculatedCount: 0
             }))
         },
         targetSelection: {
@@ -407,33 +410,55 @@ training: {
         // 2. 定义关键元素列表（保留原有关键元素检查）
         const criticalElements = [
             'classStatus', 'attributeStatus', 'materialsList',
-            'moneyCheck', 'fragments', 'scrolls',
-            'yinYangTraining', 'windFireTraining', 'earthWaterTraining' // 保持历练容器为关键元素
+            'moneyCheck', 'fragments', 'scrolls'
+            // 注意：已移除历练容器作为关键元素
         ];
 
         // 3. 初始化所有元素（保留原有错误处理逻辑）
-        Object.entries(CONFIG.elements).forEach(([key, selector]) => {
+       Object.entries(CONFIG.elements).forEach(([key, selector]) => {
             try {
                 dom[key] = document.querySelector(selector);
                 
-                if (criticalElements.includes(key) && !dom[key]) {
+                // 判断是否是历练容器
+                const isTrainingContainer = [
+                    'yinYangTraining', 
+                    'windFireTraining', 
+                    'earthWaterTraining'
+                ].includes(key);
+                
+                // 关键元素检查（排除历练容器）
+                if (criticalElements.includes(key) && !isTrainingContainer && !dom[key]) {
                     throw new Error(`[关键元素] ${selector} 未找到`);
-                } else if (!dom[key] && key !== 'lastUpdated') {
+                } 
+                // 非关键元素警告（排除历练容器）
+                else if (!dom[key] && !isTrainingContainer) {
                     console.warn(`[非关键元素] ${selector} 未找到`);
+                }
+                
+                // 特殊处理：如果历练容器未找到，只记录警告不抛出错误
+                if (isTrainingContainer && !dom[key]) {
+                    console.warn(`[历练容器] ${selector} 未找到，相关功能将不可用`);
                 }
             } catch (error) {
                 console.error(`元素初始化失败 ${key}:`, error);
+                // 只有关键元素才会阻断流程
                 if (criticalElements.includes(key)) throw error;
             }
         });
 
+
         // 4. 添加调试日志（新增）
-        console.log('DOM初始化完成', { 
+         console.log('DOM初始化完成', { 
             container: !!dom.container,
             criticalElements: criticalElements.map(k => ({ 
                 key: k, 
-                element: !!dom[k] 
-            }))
+                found: !!dom[k] 
+            })),
+            trainingContainers: {
+                yinYang: !!dom.yinYangTraining,
+                windFire: !!dom.windFireTraining,
+                earthWater: !!dom.earthWaterTraining
+            }
         });
 
     } catch (e) {
@@ -578,11 +603,18 @@ training: {
 
     // 渲染所有历练类别
     const renderTrainingCategory = (category, container) => {
-    if (!container) {
-        console.error(`渲染容器未找到: ${category}`);
-        return;
-    }
-
+    // 添加容错检查
+  if (!container) {
+    console.error(`渲染容器未找到: ${category}`);
+    return;
+  }
+  
+  if (!state.training[category]) {
+    console.error(`历练数据未找到: ${category}`);
+    container.innerHTML = `<div class="error">数据加载错误，请刷新页面</div>`;
+    return;
+  }
+     
     // 获取分类名称（如"地水历练"）
     const categoryName = getCategoryName(category); 
     const floors = [4, 6, 8, 10, 12];
@@ -1328,16 +1360,14 @@ const migrateOldData = (savedData) => {
     // 重置初始化状态
     const resetState = () => {
     const initTraining = (category) => 
-        GAME_DATA.training[category].map((item, index) => {
-            const floor = [4, 6, 8, 10, 12][index];
-            return {
-                completed: 0,
-                required: GAME_DATA.trainingPresets[17][floor], // 确保使用17阶预设值
-                userModified: false,
-                tier: 17,
-                calculatedCount: 0 // 初始化为0
-            };
-        });
+    [4, 6, 8, 10, 12].map(floor => ({
+      completed: 0,
+      required: GAME_DATA.trainingPresets[17][floor],
+      userModified: false,
+      tier: 17,
+      calculatedCount: 0
+    }));
+  
 
     return {
         moneyChecked: false,
@@ -1353,9 +1383,9 @@ const migrateOldData = (savedData) => {
             earthWater: {13: 0, 15: 0, 17: 0}
         },
         training: {
-            yinYang: initTraining('yinYang'),
-            windFire: initTraining('windFire'),
-            earthWater: initTraining('earthWater')
+             yinYang: initTraining('yinYang'),
+             windFire: initTraining('windFire'),
+             earthWater: initTraining('earthWater')
         },
         targetSelection: {
             classes: { guidao: false, shenji: false, qihuang: false, longdun: false, pojun: false },
