@@ -122,7 +122,33 @@ const ResourceTracker = (() => {
             hour12: false
         }).replace(/\//g, '-');
     };
+ 
+    const updateBasicUI = (expStatus) => {
+    // 确保DOM元素已初始化
+    if (!dom.expStatus || !dom.moneyCheck || !dom.fragments || !dom.scrolls) {
+        console.error('updateBasicUI: 缺少必要的DOM元素');
+        return;
+    }
 
+    // 更新经验显示
+    dom.expStatus.textContent = expStatus.text;
+    dom.expStatus.className = expStatus.className;
+
+    // 更新复选框和输入框
+    dom.moneyCheck.checked = state.moneyChecked;
+    dom.fragments.value = state.fragments || 0; // 避免undefined
+    dom.scrolls.value = state.scrolls || 0;
+
+    // 更新时间戳（可选）
+    if (dom.lastUpdated && state.lastUpdated) {
+        try {
+            const date = new Date(state.lastUpdated);
+            dom.lastUpdated.textContent = `最近更新：${formatDate(date)}`;
+        } catch (e) {
+            console.error('日期格式化失败:', e);
+        }
+    }
+};
     // 更新时间戳显示
     const updateLastUpdated = () => {
         if (state.lastUpdated && dom.lastUpdated) {
@@ -226,32 +252,30 @@ const safelyMergeMaterials = (savedMaterials, defaultMaterials) => {
      * 4. 绑定事件
      */
     const init = () => {
-        console.log('🚀 密探资源系统启动...');
-       try {
-         if (typeof setupDOM !== 'function' || typeof loadData !== 'function') {
-            throw new Error('核心函数未正确定义');
-        }
-    setupDOM();
-    loadData();
-    renderAll();
-    updateMaterialInputsVisibility(); 
-    setupCultivationListeners();
-    setupEventListeners();
-    console.log('✅ 初始化完成');
-} catch (error) {
-    console.error('初始化过程中出现错误:', error);
-    alert('系统初始化失败，请刷新页面重试\n错误详情请查看控制台(按F12)');
-    // 显示友好错误界面
-    document.body.innerHTML = `
-        <div style="padding:20px;color:red;font-family:sans-serif">
-            <h2>系统初始化失败</h2>
-            <p>${error.message}</p>
-            <button onclick="location.reload()" style="padding:8px 16px;">
-                点击刷新页面
-            </button>
-        </div>
-    `;
-  }
+    console.log('🚀 密探资源系统启动...');
+    try {
+        // 关键函数存在性检查
+        const requiredFunctions = [
+            'setupDOM', 'loadData', 'renderAll', 
+            'updateBasicUI', 'renderTrainingCategory'
+        ];
+        
+        requiredFunctions.forEach(funcName => {
+            if (typeof this[funcName] !== 'function') {
+                throw new Error(`核心函数 ${funcName} 未定义`);
+            }
+        });
+
+        setupDOM();
+        loadData();
+        renderAll();
+        setupEventListeners();
+        console.log('✅ 初始化完成');
+    } catch (error) {
+        console.error('初始化失败:', error);
+        // 显示更友好的错误信息
+        alert(`初始化失败: ${error.message}\n请检查控制台获取详细信息`);
+    }
 };
     // ==================== loadData 函数 ====================
    function loadData() {
@@ -406,22 +430,26 @@ training: {
 
     // 渲染整个界面
     const renderAll = () => {
-    const expStatus = calculateExpStatus();
-    const baseConditionsMet = checkBaseConditions(expStatus);
-    
-    // 更新基础UI
-    updateBasicUI(expStatus);
-    
-    // 渲染各模块
-    renderTargetSelection();
-    renderClassStatus(baseConditionsMet);
-    renderAttributeStatus();
-    renderMaterials();
-    
-    // 修复：正确调用历练渲染函数
-    if (dom.yinYangTraining) renderTrainingCategory('yinYang', dom.yinYangTraining);
-    if (dom.windFireTraining) renderTrainingCategory('windFire', dom.windFireTraining);
-    if (dom.earthWaterTraining) renderTrainingCategory('earthWater', dom.earthWaterTraining);
+    try {
+        const expStatus = calculateExpStatus();
+        const baseConditionsMet = checkBaseConditions(expStatus);
+        
+        // 确保这些函数都存在
+        if (typeof updateBasicUI === 'function') updateBasicUI(expStatus);
+        if (typeof renderTargetSelection === 'function') renderTargetSelection();
+        if (typeof renderClassStatus === 'function') renderClassStatus(baseConditionsMet);
+        if (typeof renderAttributeStatus === 'function') renderAttributeStatus();
+        if (typeof renderMaterials === 'function') renderMaterials();
+        
+        // 安全调用历练渲染
+        if (typeof renderTrainingCategory === 'function') {
+            if (dom.yinYangTraining) renderTrainingCategory('yinYang', dom.yinYangTraining);
+            if (dom.windFireTraining) renderTrainingCategory('windFire', dom.windFireTraining);
+            if (dom.earthWaterTraining) renderTrainingCategory('earthWater', dom.earthWaterTraining);
+        }
+    } catch (e) {
+        console.error('渲染过程中出错:', e);
+    }
 };
 
     // 目标密探元素
