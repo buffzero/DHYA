@@ -799,14 +799,16 @@ training: {
     const trainingItem = state.training[category][index];
     const floor = [4, 6, 8, 10, 12][index];
     
-    // 使用正确的需求值（优先使用计算结果）
-    const displayRequired = trainingItem.calculatedCount !== undefined ? 
-        trainingItem.calculatedCount : 
-        (trainingItem.userModified ? trainingItem.required : GAME_DATA.trainingPresets[trainingItem.tier][floor]);
+    // 安全访问预设值
+    const presetRequired = GAME_DATA.trainingPresets[trainingItem.tier]?.[floor] || 1;
     
-    // 计算剩余次数（使用displayRequired而不是基础required）
+    // 使用实际需求值
+    const actualRequired = trainingItem.userModified 
+        ? trainingItem.required 
+        : presetRequired;
+    
     const completed = trainingItem.completed || 0;
-    const remaining = Math.max(0, displayRequired - completed);
+    const remaining = Math.max(0, actualRequired - completed);
     
     if (isNaN(count) || count <= 0) {
         alert('核销次数必须大于0');
@@ -845,7 +847,7 @@ training: {
 
     updateAndSave();
 };
-    
+ 
     // 处理撤销操作
     const handleUndo = (category, index) => {
         const trainingItem = state.training[category][index];
@@ -902,7 +904,7 @@ training: {
                 completed: 0, // 重置完成次数为0
                 required: GAME_DATA.trainingPresets[17][floor], // 使用17阶需求
                 userModified: false,
-                tier: 17,
+                tier: item.tier || 17, 
                 calculatedCount: 0
             };
         });
