@@ -892,8 +892,11 @@ training: {
         };
     });
 
-    // 强制重新渲染并保存
-    renderTraining();
+    // 修复：使用正确的渲染函数
+    if (dom[`${category}Training`]) {
+        renderTrainingCategory(category, dom[`${category}Training`]);
+    }
+    
     saveData();
 };
 
@@ -1251,10 +1254,10 @@ const calculateAndApply = () => {
         MATERIAL_REQUIREMENTS[attribute][tier]
     ));
 
-    // 4. 计算历练次数
+     // 4. 计算历练次数
     const trainingCounts = {4:0, 6:0, 8:0, 10:0, 12:0};
     
-    // 从低层到高层计算（4,6,8,10）
+    // 从低层到高层计算
     [4, 6, 8, 10].forEach(level => {
         const primaryMat = TRAINING_RELATIONS[level][0];
         trainingCounts[level] = calculateTrainingCount(
@@ -1281,27 +1284,19 @@ const calculateAndApply = () => {
     // 取两者中的最大值
     trainingCounts[level] = Math.max(primaryCount, secondaryCount);
     
-    // 扣除历练十二的材料
+    // 更新材料缺口
     updateMaterialGaps(requirements, userMaterials, level, trainingCounts[level]);
 
     // 5. 更新状态
     const floors = [4, 6, 8, 10, 12];
     floors.forEach((floor, index) => {
-        // 确保状态对象存在
-        if (!state.training[category][index]) {
-            state.training[category][index] = {
-                completed: 0,
-                required: GAME_DATA.trainingPresets[tier][floor],
-                userModified: false,
-                tier: tier
-            };
-        }
+        const count = trainingCounts[floor];
         
-        // 保留原有完成进度，只更新需求值
+        // 更新状态对象（保留完成进度）
         state.training[category][index] = {
             ...state.training[category][index], // 保留原有属性
-            calculatedCount: trainingCounts[floor], // 设置计算结果
-            userModified: false // 重置用户修改标记
+            calculatedCount: count,             // 设置计算结果
+            userModified: false                 // 重置用户修改标记
         };
     });
 
