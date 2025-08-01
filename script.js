@@ -750,6 +750,7 @@ training: {
 };
  
     // 渲染圆圈进度
+    const renderCircles = (required, completed) => {
     // 确保至少显示1个圆圈
     const totalCircles = required <= 0 ? 1 : required;
     
