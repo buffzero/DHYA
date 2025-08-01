@@ -522,33 +522,20 @@ training: {
     };
 
     // 渲染所有历练类别
-    const renderTraining = () => {
-        renderTrainingCategory('yinYang', dom.yinYangTraining);
-        renderTrainingCategory('windFire', dom.windFireTraining);
-        renderTrainingCategory('earthWater', dom.earthWaterTraining);
-    };
-          
-    // 渲染单个历练类别
-   const renderTrainingCategory = (category, container) => {
+    const renderTrainingCategory = (category, container) => {
     if (!container) {
         console.error(`渲染容器未找到: ${category}`);
         return;
     }
-    
-    // 确保这些变量在最开始定义
+
+    // 获取分类名称（如"地水历练"）
     const categoryName = getCategoryName(category); 
     const floors = [4, 6, 8, 10, 12];
-    
-    // 调试日志
-    console.log(`开始渲染${categoryName}`, {
-        trainingData: state.training[category],
-        completions: state.trainingCompletions[category]
-    });
+    const currentTier = state.training[category][0]?.tier || 17; // 默认修为17阶
 
-    // 生成修为徽章（显示已完成次数）
+    // 生成修为徽章（显示各阶完成情况）
     const completionBadges = [13, 15, 17].map(tier => {
         const completed = state.trainingCompletions[category][tier] || 0;
-        // 关键修改：直接检查当前修为的实际完成情况，而不是依赖缓存
         const currentProgress = checkTrainingCompletion(category, tier);
         const available = Math.max(0, currentProgress - completed);
         
@@ -568,14 +555,14 @@ training: {
 
     container.innerHTML = `
         <div class="training-category-title">
-          <div class="category-name">${categoryName}</div>
+            <div class="category-name">${categoryName}</div>
             <div class="title-controls-container">
-              <div class="completion-badges">${completionBadges}</div>
+                <div class="completion-badges">${completionBadges}</div>
                 <div class="training-controls">
                     <select class="tier-select" data-category="${category}">
                         ${[13, 15, 17].map(tier => `
                             <option value="${tier}" 
-                                ${state.training[category][0].tier === tier ? 'selected' : ''}>
+                                ${currentTier === tier ? 'selected' : ''}>
                                 修为${tier}
                             </option>
                         `).join('')}
@@ -584,21 +571,20 @@ training: {
                 </div>
             </div>
         </div>
-       ${state.training[category].map((trainingItem, index) => {
+        ${state.training[category].map((trainingItem, index) => {
             const floor = floors[index];
-            const baseRequired = GAME_DATA.trainingPresets[trainingItem.tier][floor];
             
-            const displayRequired = (trainingItem.calculatedCount !== undefined && trainingItem.calculatedCount !== null) 
+            // 关键修复：优先显示 calculatedCount，否则用当前修为等级的预设值
+            const displayRequired = (trainingItem.calculatedCount !== undefined) 
                 ? trainingItem.calculatedCount 
-                : (trainingItem.userModified ? trainingItem.required : baseRequired);
+                : (trainingItem.userModified 
+                    ? trainingItem.required 
+                    : GAME_DATA.trainingPresets[currentTier][floor]);
             
             const completed = trainingItem.completed || 0;
-            const isMet = displayRequired === 0 || completed >= displayRequired;
-            
-            // 关键修复：确保remaining变量正确定义
+            const isMet = completed >= displayRequired;
             const remaining = isMet ? 0 : Math.max(0, displayRequired - completed);
 
-         
             return `
                 <div class="training-item">
                     <div class="training-header">
@@ -616,27 +602,27 @@ training: {
                     </div>
                     ${!isMet ? renderCircles(displayRequired, completed) : ''}
                     <div class="training-actions">
-                       <button class="consume-btn" 
-    data-category="${category}" 
-    data-index="${index}" 
-    data-count="1"
-    ${isMet ? 'disabled' : ''}>
-    核销一次
-</button>
-<button class="consume-btn" 
-    data-category="${category}" 
-    data-index="${index}" 
-    data-count="3"
-    ${remaining < 3 ? 'disabled' : ''}>
-    核销三次
-</button>
-<button class="consume-btn" 
-    data-category="${category}" 
-    data-index="${index}" 
-    data-count="6"
-    ${remaining < 6 ? 'disabled' : ''}>
-    核销六次
-</button>
+                        <button class="consume-btn" 
+                            data-category="${category}" 
+                            data-index="${index}" 
+                            data-count="1"
+                            ${isMet ? 'disabled' : ''}>
+                            核销一次
+                        </button>
+                        <button class="consume-btn" 
+                            data-category="${category}" 
+                            data-index="${index}" 
+                            data-count="3"
+                            ${remaining < 3 ? 'disabled' : ''}>
+                            核销三次
+                        </button>
+                        <button class="consume-btn" 
+                            data-category="${category}" 
+                            data-index="${index}" 
+                            data-count="6"
+                            ${remaining < 6 ? 'disabled' : ''}>
+                            核销六次
+                        </button>
                         <button class="consume-btn custom-consume" 
                             data-category="${category}" 
                             data-index="${index}">
@@ -1271,13 +1257,16 @@ const migrateOldData = (savedData) => {
     // 重置初始化状态
     const resetState = () => {
     const initTraining = (category) => 
-        GAME_DATA.training[category].map(item => ({
-            completed: 0,
-            required: item.required,
-            userModified: false,
-            tier: item.tier || 17,
-            calculatedCount: 0  // 确保计算结果清零
-        }));
+        GAME_DATA.training[category].map((item, index) => {
+            const floor = [4, 6, 8, 10, 12][index];
+            return {
+                completed: 0,
+                required: GAME_DATA.trainingPresets[17][floor], // 强制绑定修为17阶
+                userModified: false,
+                tier: 17, // 明确指定修为等级
+                calculatedCount: 0  // 清零计算结果
+            };
+        });
 
     return {
         moneyChecked: false,
