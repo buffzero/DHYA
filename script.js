@@ -1170,26 +1170,21 @@ const calculateAndApply = () => {
     const category = attribute === 'yinYang' ? 'yinYang' : 
                     attribute === 'windFire' ? 'windFire' : 'earthWater';
     
-    // 2. 读取用户输入的材料数量（强制转换为数字）
+    // 2. 读取用户输入的材料数量
     const userMaterials = {};
     const materialContainer = document.getElementById(`${attribute}-materials`);
-    if (!materialContainer) {
-        alert('错误：找不到材料输入区域');
-        return;
-    }
     materialContainer.querySelectorAll('input').forEach(input => {
         userMaterials[input.dataset.material] = parseInt(input.value) || 0;
     });
 
-    // 3. 获取当前修为的材料需求配置
+    // 3. 获取材料需求配置
     const requirements = JSON.parse(JSON.stringify(
         MATERIAL_REQUIREMENTS[attribute][tier]
     ));
 
-    // 4. 核心计算逻辑：从低层到高层计算历练次数
+    // 4. 计算历练次数
     const trainingCounts = {4:0, 6:0, 8:0, 10:0, 12:0};
     
-    // === 关键修改点1：严格按层计算主材料 ===
     [4, 6, 8, 10, 12].forEach(level => {
         const primaryMat = TRAINING_RELATIONS[level][0];
         trainingCounts[level] = calculateTrainingCount(
@@ -1198,7 +1193,7 @@ const calculateAndApply = () => {
         updateMaterialGaps(requirements, userMaterials, level, trainingCounts[level]);
     });
 
-    // === 关键修改点2：特殊处理历练十二的副材料（取最大值）===
+    // 特殊处理历练十二
     if (requirements[TRAINING_RELATIONS[12][1]] > 0) {
         const secondaryCount = calculateTrainingCount(
             requirements, userMaterials, 12,
@@ -1218,13 +1213,18 @@ const calculateAndApply = () => {
                 tier: tier
             };
         }
+        // 设置计算结果
         state.training[category][index].calculatedCount = trainingCounts[floor];
     });
 
-    // 6. 渲染界面
-    renderTraining();
-    
-    // 7. 优化结果显示：只显示需要打的历练
+    // === 修复点 ===
+    // 6. 重新渲染相关历练类别
+    if (dom[`${category}Training`]) {
+        renderTrainingCategory(category, dom[`${category}Training`]);
+    }
+    // ==============
+
+    // 7. 显示优化结果
     const activeCounts = Object.entries(trainingCounts)
         .filter(([_, count]) => count > 0)
         .map(([level, count]) => `历练${level}: ${count}次`);
