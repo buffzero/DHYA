@@ -1230,6 +1230,7 @@ const applyToTraining = (category, counts) => {
     updateAndSave();
 };
 
+// ==================== 修复后的计算函数 ====================
 const calculateAndApply = () => {
     console.log('开始计算修为材料...');
     
@@ -1257,43 +1258,74 @@ const calculateAndApply = () => {
         MATERIAL_REQUIREMENTS[attribute][tier]
     ));
 
-     // 4. 计算历练次数
+    // 4. 初始化当前库存（包含用户已有材料）
+    const currentStock = {...userMaterials};
+    
+    // 5. 按顺序计算各层历练次数（4→6→8→10→12）
     const trainingCounts = {4:0, 6:0, 8:0, 10:0, 12:0};
     
-    // 从低层到高层计算（4,6,8,10）
-    [4, 6, 8, 10].forEach(level => {
-        const primaryMat = TRAINING_RELATIONS[level][0];
-        trainingCounts[level] = calculateTrainingCount(
-            requirements, userMaterials, level, primaryMat
-        );
-        updateMaterialGaps(requirements, userMaterials, level, trainingCounts[level]);
-    });
+    // 历练4层计算
+    const level4 = 4;
+    const level4Mats = TRAINING_RELATIONS[level4];
+    const level4PrimaryGap = Math.max(0, requirements[level4Mats[0]] - currentStock[level4Mats[0]]);
+    trainingCounts[level4] = Math.ceil(level4PrimaryGap / TRAINING_DROPS[level4].primary);
+    
+    // 更新库存（主材料+副材料）
+    currentStock[level4Mats[0]] += trainingCounts[level4] * TRAINING_DROPS[level4].primary;
+    currentStock[level4Mats[1]] += trainingCounts[level4] * TRAINING_DROPS[level4].secondary;
+    
+    // 历练6层计算
+    const level6 = 6;
+    const level6Mats = TRAINING_RELATIONS[level6];
+    const level6PrimaryGap = Math.max(0, requirements[level6Mats[0]] - currentStock[level6Mats[0]]);
+    trainingCounts[level6] = Math.ceil(level6PrimaryGap / TRAINING_DROPS[level6].primary);
+    
+    // 更新库存
+    currentStock[level6Mats[0]] += trainingCounts[level6] * TRAINING_DROPS[level6].primary;
+    currentStock[level6Mats[1]] += trainingCounts[level6] * TRAINING_DROPS[level6].secondary;
+    
+    // 历练8层计算
+    const level8 = 8;
+    const level8Mats = TRAINING_RELATIONS[level8];
+    const level8PrimaryGap = Math.max(0, requirements[level8Mats[0]] - currentStock[level8Mats[0]]);
+    trainingCounts[level8] = Math.ceil(level8PrimaryGap / TRAINING_DROPS[level8].primary);
+    
+    // 更新库存
+    currentStock[level8Mats[0]] += trainingCounts[level8] * TRAINING_DROPS[level8].primary;
+    currentStock[level8Mats[1]] += trainingCounts[level8] * TRAINING_DROPS[level8].secondary;
+    
+    // 历练10层计算
+    const level10 = 10;
+    const level10Mats = TRAINING_RELATIONS[level10];
+    const level10PrimaryGap = Math.max(0, requirements[level10Mats[0]] - currentStock[level10Mats[0]]);
+    trainingCounts[level10] = Math.ceil(level10PrimaryGap / TRAINING_DROPS[level10].primary);
+    
+    // 更新库存
+    currentStock[level10Mats[0]] += trainingCounts[level10] * TRAINING_DROPS[level10].primary;
+    currentStock[level10Mats[1]] += trainingCounts[level10] * TRAINING_DROPS[level10].secondary;
+    
+    // 历练12层计算（特殊处理）
+    const level12 = 12;
+    const level12Mats = TRAINING_RELATIONS[level12];
+    
+    // 先计算悲回风扇（唯一来源）
+    const beiShanGap = Math.max(0, requirements[level12Mats[1]] - currentStock[level12Mats[1]]);
+    trainingCounts[level12] = Math.ceil(beiShanGap / TRAINING_DROPS[level12].secondary);
+    
+    // 检查仙门扇是否满足
+    const xianShanAfter = currentStock[level12Mats[0]] + 
+                          trainingCounts[level12] * TRAINING_DROPS[level12].primary;
+    const xianShanGap = Math.max(0, requirements[level12Mats[0]] - xianShanAfter);
+    
+    // 如果仙门扇仍有缺口，增加次数
+    if (xianShanGap > 0) {
+        const additional = Math.ceil(xianShanGap / TRAINING_DROPS[level12].primary);
+        trainingCounts[level12] += additional;
+    }
 
-    // 特殊处理历练十二 - 同时考虑主副材料
-    const level = 12;
-    const primaryMat = TRAINING_RELATIONS[level][0];
-    const secondaryMat = TRAINING_RELATIONS[level][1];
-    
-    // 计算主材料需求
-    const primaryCount = calculateTrainingCount(
-        requirements, userMaterials, level, primaryMat
-    );
-    
-    // 计算副材料需求
-    const secondaryCount = calculateTrainingCount(
-        requirements, userMaterials, level, secondaryMat
-    );
-    
-    // 取两者中的最大值
-    trainingCounts[level] = Math.max(primaryCount, secondaryCount);
-    
-    // 更新材料缺口
-    updateMaterialGaps(requirements, userMaterials, level, trainingCounts[level]);
-
-    // 5. 更新状态
+    // 6. 更新状态
     const floors = [4, 6, 8, 10, 12];
     floors.forEach((floor, index) => {
-        // 确保状态对象存在
         if (!state.training[category][index]) {
             state.training[category][index] = {
                 completed: 0,
@@ -1302,18 +1334,12 @@ const calculateAndApply = () => {
                 tier: tier
             };
         }
-        
-        // 更新状态
         state.training[category][index].calculatedCount = trainingCounts[floor];
     });
 
-    // 6. 保存数据并重新渲染
+    // 7. 保存数据并重新渲染
     saveData();
-    
-    // 7. 重新渲染对应历练类别
-    if (dom[`${category}Training`]) {
-        renderTrainingCategory(category, dom[`${category}Training`]);
-    }
+    renderTrainingCategory(category, dom[`${category}Training`]);
     
     // 8. 显示结果
     const activeCounts = Object.entries(trainingCounts)
