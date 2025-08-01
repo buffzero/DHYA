@@ -660,41 +660,37 @@ training: {
         ${state.training[category].map((trainingItem, index) => {
             const floor = floors[index];
             
-            // 关键修复点：三重取值逻辑
-            const displayRequired = (
-                trainingItem.calculatedCount !== undefined && 
-                trainingItem.calculatedCount !== null
-            ) ? trainingItem.calculatedCount
-              : trainingItem.userModified 
+            / 关键修复：优先使用计算结果作为实际需求
+        const actualRequired = trainingItem.calculatedCount !== undefined && 
+                              trainingItem.calculatedCount !== null
+            ? trainingItem.calculatedCount
+            : trainingItem.userModified 
                 ? trainingItem.required 
-                : GAME_DATA.trainingPresets[trainingItem.tier][floor];
-            
-            // 实际判断标准（不考虑calculatedCount）
-            const actualRequired = trainingItem.userModified 
-                ? trainingItem.required 
-                : GAME_DATA.trainingPresets[trainingItem.tier][floor];
+                : GAME_DATA.trainingPresets[trainingItem.tier || 17][floor];
                 
-            const completed = trainingItem.completed || 0;
-            const isMet = completed >= actualRequired;
-            const remaining = isMet ? 0 : Math.max(0, actualRequired - completed);
+        const completed = trainingItem.completed || 0;
+        const isMet = completed >= actualRequired;
+        const remaining = isMet ? 0 : Math.max(0, actualRequired - completed);
+
 
             return `
-                <div class="training-item">
-                    <div class="training-header">
-                        <div class="training-name">${GAME_DATA.training[category][index].name}</div>
-                        <div class="training-input-status">
-                            <input type="text"
-                                class="training-count-input" 
-                                data-category="${category}" 
-                                data-index="${index}"
-                                value="${displayRequired}">
-                            <div class="sub-status-indicator ${isMet ? 'met' : 'not-met'}">
-                                ${isMet ? '已满足' : `${completed}/${actualRequired}`}
-                            </div>
+            <div class="training-item">
+                <div class="training-header">
+                    <div class="training-name">${GAME_DATA.training[category][index].name}</div>
+                    <div class="training-input-status">
+                        <input type="text"
+                            class="training-count-input" 
+                            data-category="${category}" 
+                            data-index="${index}"
+                            value="${actualRequired}"> <!-- 显示实际需求 -->
+                        <div class="sub-status-indicator ${isMet ? 'met' : 'not-met'}">
+                            ${isMet ? '已满足' : `${completed}/${actualRequired}`}
                         </div>
                     </div>
-                    ${!isMet ? renderCircles(actualRequired, completed) : ''}
-                    <div class="training-actions">
+                </div>
+                <!-- 始终显示圆圈 -->
+                ${renderCircles(actualRequired, completed)}
+                <div class="training-actions">
                         <button class="consume-btn" 
                             data-category="${category}" 
                             data-index="${index}" 
@@ -744,15 +740,18 @@ training: {
  
     // 渲染圆圈进度
    const renderCircles = (required, completed) => {
-    if (required <= 0) return ''; // 计算结果为0时不显示圆圈
+    // 即使需求为0也显示圆圈
+    if (required <= 0) required = 0;
     
     let circlesHTML = '';
+    const totalCircles = Math.max(required, completed); // 确保显示所有圆圈
+    
     // 已完成的蓝色圆圈
-    for (let i = 0; i < completed; i++) {
+    for (let i = 0; i < Math.min(completed, totalCircles); i++) {
         circlesHTML += `<div class="circle filled"></div>`;
     }
     // 未完成的灰色圆圈
-    for (let i = completed; i < required; i++) {
+    for (let i = completed; i < totalCircles; i++) {
         circlesHTML += `<div class="circle"></div>`;
     }
     return `<div class="circles-container">${circlesHTML}</div>`;
@@ -803,9 +802,12 @@ training: {
     const presetRequired = GAME_DATA.trainingPresets[trainingItem.tier]?.[floor] || 1;
     
     // 使用实际需求值
-    const actualRequired = trainingItem.userModified 
-        ? trainingItem.required 
-        : presetRequired;
+    const actualRequired = trainingItem.calculatedCount !== undefined && 
+                          trainingItem.calculatedCount !== null
+        ? trainingItem.calculatedCount
+        : trainingItem.userModified 
+            ? trainingItem.required 
+            : GAME_DATA.trainingPresets[trainingItem.tier || 17][floor];
     
     const completed = trainingItem.completed || 0;
     const remaining = Math.max(0, actualRequired - completed);
@@ -1266,19 +1268,17 @@ const calculateAndApply = () => {
     // 5. 更新状态
     const floors = [4, 6, 8, 10, 12];
     floors.forEach((floor, index) => {
-        // 确保状态对象存在
-        if (!state.training[category][index]) {
-            state.training[category][index] = {
-                completed: 0,
-                required: GAME_DATA.trainingPresets[tier][floor],
-                userModified: false,
-                tier: tier
-            };
-        }
+        const count = trainingCounts[floor];
         
-        // 设置计算结果
-        state.training[category][index].calculatedCount = trainingCounts[floor];
+        // 更新状态对象
+        state.training[category][index] = {
+            ...state.training[category][index], // 保留原有属性
+            calculatedCount: count,             // 设置计算结果
+            completed: 0,                      // 重置完成次数
+            userModified: false                 // 重置用户修改标记
+        };
     });
+
 
     // 6. 保存数据并重新渲染
     saveData();
@@ -1380,26 +1380,6 @@ const migrateOldData = (savedData) => {
 };
  
      const bindTrainingEvents = (container) => {
-        // 绑定核销按钮
-        container.querySelectorAll('.consume-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const category = e.target.dataset.category;
-                const index = parseInt(e.target.dataset.index);
-                let count;
-                
-                if (e.target.classList.contains('custom-consume')) {
-                    const input = e.target.nextElementSibling;
-                    count = parseInt(input.value) || 0;
-                } else {
-                    count = parseInt(e.target.dataset.count) || 1;
-                }
-                
-                if (count > 0) {
-                    handleConsume(category, index, count);
-                }
-            });
-        });
-        
         // 绑定撤销按钮
         container.querySelectorAll('.undo-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
