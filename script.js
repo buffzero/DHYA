@@ -284,11 +284,6 @@ const safelyMergeMaterials = (savedMaterials, defaultMaterials) => {
         // 5. 新增：绑定修为材料计算事件
         setupCultivationListeners();
         
-        // 6. 新增：初始绑定历练容器事件
-        if (dom.yinYangTraining) bindTrainingEvents(dom.yinYangTraining);
-        if (dom.windFireTraining) bindTrainingEvents(dom.windFireTraining);
-        if (dom.earthWaterTraining) bindTrainingEvents(dom.earthWaterTraining);
-        
         console.log('✅ 初始化成功');
     } catch (error) {
         console.error('初始化失败:', error);
@@ -500,7 +495,7 @@ training: {
     };
     // 渲染整个界面
     const renderAll = () => {
-     console.log("开始渲染所有组件");
+    console.log("开始渲染所有组件");
     try {
         const expStatus = calculateExpStatus();
         const baseConditionsMet = checkBaseConditions(expStatus);
@@ -510,18 +505,19 @@ training: {
         if (typeof renderTargetSelection === 'function') renderTargetSelection();
         if (typeof renderClassStatus === 'function') renderClassStatus(baseConditionsMet);
         if (typeof renderAttributeStatus === 'function') renderAttributeStatus();
-        if (typeof renderMaterials === 'function') renderMaterials();
+        if (typeof renderMaterials === 'function') renderMaterials(); // 只调用一次
         
         // 安全调用历练渲染
-        if (typeof renderTrainingCategory === 'function') {
-            if (dom.yinYangTraining) renderTrainingCategory('yinYang', dom.yinYangTraining);
-            if (dom.windFireTraining) renderTrainingCategory('windFire', dom.windFireTraining);
-            if (dom.earthWaterTraining) renderTrainingCategory('earthWater', dom.earthWaterTraining);
-        }
+        if (dom.yinYangTraining) 
+            renderTrainingCategory('yinYang', dom.yinYangTraining);
+        if (dom.windFireTraining) 
+            renderTrainingCategory('windFire', dom.windFireTraining);
+        if (dom.earthWaterTraining) 
+            renderTrainingCategory('earthWater', dom.earthWaterTraining);
     } catch (e) {
         console.error('渲染过程中出错:', e);
     }
-     console.log("渲染完成");
+    console.log("渲染完成");
 };
 
     // 目标密探元素
@@ -605,6 +601,7 @@ training: {
 
     // 渲染所有历练类别
     const renderTrainingCategory = (category, container) => {
+     
     // 添加容错检查
   if (!container) {
     console.error(`渲染容器未找到: ${category}`);
@@ -1082,25 +1079,7 @@ training: {
             }
         });
     };
- 
-    const setupCultivationListeners = () => {
-    try {
-        // 确保DOM元素已加载
-        if (!dom.cultivationAttribute || !dom.cultivationTier || !dom.calculateCultivation) {
-            console.error('修为材料相关DOM元素未找到');
-            return;
-        }
 
-        // 初始显示风火材料（通过统一函数管理）
-        updateMaterialInputsVisibility();
-
-        // 事件监听
-        dom.cultivationAttribute.addEventListener('change', updateMaterialInputsVisibility);
-        dom.calculateCultivation.addEventListener('click', calculateAndApply);
-    } catch (error) {
-        console.error('初始化修为材料监听失败:', error);
-    }
-};
           // ==================== 工具函数 ====================
 const updateMaterialInputsVisibility = () => {
     const attribute = dom.cultivationAttribute.value;
