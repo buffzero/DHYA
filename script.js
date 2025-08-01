@@ -752,7 +752,7 @@ training: {
     // 渲染圆圈进度
     const renderCircles = (required, completed) => {
     // 确保至少显示1个圆圈
-    const totalCircles = required <= 0 ? 1 : required;
+    const totalCircles = Math.max(required, 1);
     
     let circlesHTML = '';
     // 已完成的蓝色圆圈
@@ -760,7 +760,7 @@ training: {
         circlesHTML += `<div class="circle filled"></div>`;
     }
     // 未完成的灰色圆圈
-    for (let i = completed; i < totalCircles; i++) {
+    for (let i = Math.min(completed, totalCircles); i < totalCircles; i++) {
         circlesHTML += `<div class="circle"></div>`;
     }
     return `<div class="circles-container">${circlesHTML}</div>`;
@@ -908,8 +908,8 @@ training: {
                 completed: 0, // 重置完成次数为0
                 required: GAME_DATA.trainingPresets[17][floor], // 使用17阶需求
                 userModified: false,
-                tier: item.tier || 17, 
-                calculatedCount: 0
+                tier: 17,
+                calculatedCount: null // 重置计算结果
             };
         });
 
@@ -917,6 +917,11 @@ training: {
         state.trainingHistory = state.trainingHistory.filter(
             record => record.category !== category
         );
+        
+        // 重置修为完成记录
+        [13, 15, 17].forEach(tier => {
+            state.trainingCompletions[category][tier] = 0;
+        });
         
         updateAndSave(); // 触发重新渲染
     }
@@ -1249,8 +1254,8 @@ const calculateAndApply = () => {
     // 4. 计算历练次数
     const trainingCounts = {4:0, 6:0, 8:0, 10:0, 12:0};
     
-    // 从低层到高层计算
-    [4, 6, 8, 10, 12].forEach(level => {
+    // 从低层到高层计算（4,6,8,10）
+    [4, 6, 8, 10].forEach(level => {
         const primaryMat = TRAINING_RELATIONS[level][0];
         trainingCounts[level] = calculateTrainingCount(
             requirements, userMaterials, level, primaryMat
@@ -1258,28 +1263,47 @@ const calculateAndApply = () => {
         updateMaterialGaps(requirements, userMaterials, level, trainingCounts[level]);
     });
 
-    // 特殊处理历练十二的副材料
-    if (requirements[TRAINING_RELATIONS[12][1]] > 0) {
-        const secondaryCount = calculateTrainingCount(
-            requirements, userMaterials, 12,
-            TRAINING_RELATIONS[12][1]
-        );
-        trainingCounts[12] = Math.max(trainingCounts[12], secondaryCount);
-    }
+    // 特殊处理历练十二 - 同时考虑主副材料
+    const level = 12;
+    const primaryMat = TRAINING_RELATIONS[level][0];
+    const secondaryMat = TRAINING_RELATIONS[level][1];
+    
+    // 计算主材料需求
+    const primaryCount = calculateTrainingCount(
+        requirements, userMaterials, level, primaryMat
+    );
+    
+    // 计算副材料需求
+    const secondaryCount = calculateTrainingCount(
+        requirements, userMaterials, level, secondaryMat
+    );
+    
+    // 取两者中的最大值
+    trainingCounts[level] = Math.max(primaryCount, secondaryCount);
+    
+    // 扣除历练十二的材料
+    updateMaterialGaps(requirements, userMaterials, level, trainingCounts[level]);
 
     // 5. 更新状态
     const floors = [4, 6, 8, 10, 12];
     floors.forEach((floor, index) => {
-        const count = trainingCounts[floor];
+        // 确保状态对象存在
+        if (!state.training[category][index]) {
+            state.training[category][index] = {
+                completed: 0,
+                required: GAME_DATA.trainingPresets[tier][floor],
+                userModified: false,
+                tier: tier
+            };
+        }
         
-        // 更新状态对象（保留完成进度）
+        // 保留原有完成进度，只更新需求值
         state.training[category][index] = {
             ...state.training[category][index], // 保留原有属性
-            calculatedCount: count,             // 设置计算结果
-            userModified: false                 // 重置用户修改标记
+            calculatedCount: trainingCounts[floor], // 设置计算结果
+            userModified: false // 重置用户修改标记
         };
     });
-
 
     // 6. 保存数据并重新渲染
     saveData();
@@ -1298,7 +1322,6 @@ const calculateAndApply = () => {
         ? `需要完成:\n${activeCounts.join('\n')}` 
         : "🎉 全部材料已满足！");
 };
-
     // ==================== 工具函数 ====================
     /**
  * 兼容旧版数据迁移
