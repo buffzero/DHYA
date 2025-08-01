@@ -597,19 +597,27 @@ training: {
                 </div>
             </div>
         </div>
-        ${state.training[category].map((trainingItem, index) => {
-        const floor = floors[index];
+         ${state.training[category].map((trainingItem, index) => {
+            const floor = floors[index];
             
-            // 关键修复：优先显示 calculatedCount，否则用当前修为等级的预设值
+            // 关键修复：正确获取需求值
+            // 1. 优先显示计算值
             const displayRequired = (trainingItem.calculatedCount !== undefined && trainingItem.calculatedCount !== null)
-            ? trainingItem.calculatedCount
-            : (trainingItem.userModified
-                ? trainingItem.required
-                : GAME_DATA.trainingPresets[trainingItem.tier][floor]);
-
-        const completed = trainingItem.completed || 0;
-        const isMet = displayRequired <= 0 || completed >= displayRequired;
-            const remaining = isMet ? 0 : Math.max(0, displayRequired - completed);
+                ? trainingItem.calculatedCount
+                : (trainingItem.userModified 
+                    ? trainingItem.required 
+                    : GAME_DATA.trainingPresets[trainingItem.tier][floor]);
+            
+            // 2. 实际需求值（用于判断是否满足）
+            const actualRequired = trainingItem.userModified 
+                ? trainingItem.required 
+                : GAME_DATA.trainingPresets[trainingItem.tier][floor];
+                
+            const completed = trainingItem.completed || 0;
+            
+            // 正确判断是否满足条件
+            const isMet = completed >= actualRequired;
+            const remaining = isMet ? 0 : Math.max(0, actualRequired - completed);
 
             return `
                 <div class="training-item">
@@ -825,23 +833,23 @@ training: {
     if (confirm(`确定要重置【${getCategoryName(category)}】的所有进度吗？`)) {
         const floors = [4, 6, 8, 10, 12];
         
-        state.training[category] = state.training[category].map((item, index) => ({
-            completed: 0,
-            required: GAME_DATA.trainingPresets[17][floors[index]], // 强制重置为17阶需求
-            userModified: false,
-            tier: 17,
-            calculatedCount: undefined // 清除计算结果
-        }));
+        state.training[category] = state.training[category].map((item, index) => {
+            const floor = floors[index];
+            return {
+                completed: 0, // 重置完成次数为0
+                required: GAME_DATA.trainingPresets[17][floor], // 使用17阶需求
+                userModified: false,
+                tier: 17,
+                calculatedCount: 0
+            };
+        });
 
-        // 重置完成记录
-        state.trainingCompletions[category] = {13: 0, 15: 0, 17: 0};
-        
         // 清除相关历史记录
         state.trainingHistory = state.trainingHistory.filter(
             record => record.category !== category
         );
         
-        updateAndSave();
+        updateAndSave(); // 触发重新渲染
     }
 };
 
@@ -1283,10 +1291,10 @@ const migrateOldData = (savedData) => {
             const floor = [4, 6, 8, 10, 12][index];
             return {
                 completed: 0,
-                required: GAME_DATA.trainingPresets[17][floor], // 强制使用17阶预设值
+                required: GAME_DATA.trainingPresets[17][floor], // 确保使用17阶预设值
                 userModified: false,
                 tier: 17,
-                calculatedCount: undefined // 明确设为undefined而不是0
+                calculatedCount: 0 // 初始化为0
             };
         });
 
