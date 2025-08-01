@@ -500,6 +500,7 @@ training: {
     };
     // 渲染整个界面
     const renderAll = () => {
+     console.log("开始渲染所有组件");
     try {
         const expStatus = calculateExpStatus();
         const baseConditionsMet = checkBaseConditions(expStatus);
@@ -520,6 +521,7 @@ training: {
     } catch (e) {
         console.error('渲染过程中出错:', e);
     }
+     console.log("渲染完成");
 };
 
     // 目标密探元素
