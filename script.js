@@ -406,25 +406,23 @@ training: {
 
     // 渲染整个界面
     const renderAll = () => {
-        const expStatus = calculateExpStatus();
-        const baseConditionsMet = checkBaseConditions(expStatus);
-        
-        updateBasicUI(expStatus);
-        renderTargetSelection();
-        renderClassStatus(baseConditionsMet);
-        renderAttributeStatus();
-        renderMaterials();
-        renderTraining();
-    };
-
-    // 更新基础UI元素
-    const updateBasicUI = (expStatus) => {
-        dom.expStatus.textContent = expStatus.text;
-        dom.expStatus.className = expStatus.className;
-        dom.moneyCheck.checked = state.moneyChecked;
-        dom.fragments.value = state.fragments;
-        dom.scrolls.value = state.scrolls;
-    };
+    const expStatus = calculateExpStatus();
+    const baseConditionsMet = checkBaseConditions(expStatus);
+    
+    // 更新基础UI
+    updateBasicUI(expStatus);
+    
+    // 渲染各模块
+    renderTargetSelection();
+    renderClassStatus(baseConditionsMet);
+    renderAttributeStatus();
+    renderMaterials();
+    
+    // 修复：正确调用历练渲染函数
+    if (dom.yinYangTraining) renderTrainingCategory('yinYang', dom.yinYangTraining);
+    if (dom.windFireTraining) renderTrainingCategory('windFire', dom.windFireTraining);
+    if (dom.earthWaterTraining) renderTrainingCategory('earthWater', dom.earthWaterTraining);
+};
 
     // 目标密探元素
     const renderTargetSelection = () => {
