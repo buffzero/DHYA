@@ -123,6 +123,18 @@ const ResourceTracker = (() => {
         }).replace(/\//g, '-');
     };
  
+    // 新增职业键名映射函数
+    const getClassKey = (className) => {
+        const map = {
+            '诡道': 'guidao',
+            '神纪': 'shenji', 
+            '岐黄': 'qihuang',
+            '龙盾': 'longdun',
+            '破军': 'pojun'
+        };
+        return map[className] || className.toLowerCase();
+    };
+ 
     const updateBasicUI = (expStatus) => {
     // 确保DOM元素已初始化
     if (!dom.expStatus || !dom.moneyCheck || !dom.fragments || !dom.scrolls) {
@@ -417,7 +429,21 @@ training: {
     }
 };
     // ==================== 渲染函数 ====================
-
+    // 渲染职业状态
+    const renderClassStatus = (baseConditionsMet) => {
+        dom.classStatus.innerHTML = GAME_DATA.classes.map(className => {
+            const isReady = checkClassReady(className, baseConditionsMet);
+            const classKey = getClassKey(className);
+            return `
+                <div class="status-item ${classKey}">
+                    <span>${className}</span>
+                    <span class="status-indicator ${isReady ? 'ready' : 'pending'}">
+                        ${isReady ? '可满级' : '待沉淀'}
+                    </span>
+                </div>
+            `;
+        }).join('');
+    };
     // 渲染整个界面
     const renderAll = () => {
     try {
@@ -459,22 +485,6 @@ training: {
                 ? state.targetSelection.classes[value] 
                 : state.targetSelection.attributes[value];
         });
-    };
-    
-    // 渲染职业状态
-    const renderClassStatus = (baseConditionsMet) => {
-        dom.classStatus.innerHTML = GAME_DATA.classes.map(className => {
-            const isReady = checkClassReady(className, baseConditionsMet);
-            const classKey = getClassKey(className);
-            return `
-                <div class="status-item ${classKey}">
-                    <span>${className}</span>
-                    <span class="status-indicator ${isReady ? 'ready' : 'pending'}">
-                        ${isReady ? '可满级' : '待沉淀'}
-                    </span>
-                </div>
-            `;
-        }).join('');
     };
     
     // 渲染属性状态
