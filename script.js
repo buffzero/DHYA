@@ -660,7 +660,7 @@ training: {
         ${state.training[category].map((trainingItem, index) => {
             const floor = floors[index];
             
-            / 关键修复：优先使用计算结果作为实际需求
+            // 关键修复：优先使用计算结果作为实际需求
         const actualRequired = trainingItem.calculatedCount !== undefined && 
                               trainingItem.calculatedCount !== null
             ? trainingItem.calculatedCount
@@ -799,15 +799,16 @@ training: {
     const floor = [4, 6, 8, 10, 12][index];
     
     // 安全访问预设值
-    const presetRequired = GAME_DATA.trainingPresets[trainingItem.tier]?.[floor] || 1;
+    const tier = trainingItem.tier || 17;
+    const presetRequired = GAME_DATA.trainingPresets[tier]?.[floor] || 1;
     
     // 使用实际需求值
-    const actualRequired = trainingItem.calculatedCount !== undefined && 
-                          trainingItem.calculatedCount !== null
+    const actualRequired = (trainingItem.calculatedCount !== undefined && 
+                          trainingItem.calculatedCount !== null)
         ? trainingItem.calculatedCount
         : trainingItem.userModified 
             ? trainingItem.required 
-            : GAME_DATA.trainingPresets[trainingItem.tier || 17][floor];
+            : presetRequired;
     
     const completed = trainingItem.completed || 0;
     const remaining = Math.max(0, actualRequired - completed);
