@@ -588,17 +588,17 @@ training: {
             </div>
         </div>
         ${state.training[category].map((trainingItem, index) => {
-            const floor = floors[index];
+        const floor = floors[index];
             
             // 关键修复：优先显示 calculatedCount，否则用当前修为等级的预设值
-            const displayRequired = (trainingItem.calculatedCount !== undefined) 
-                ? trainingItem.calculatedCount 
-                : (trainingItem.userModified 
-                    ? trainingItem.required 
-                    : GAME_DATA.trainingPresets[currentTier][floor]);
-            
-            const completed = trainingItem.completed || 0;
-            const isMet = completed >= displayRequired;
+            const displayRequired = (trainingItem.calculatedCount !== undefined && trainingItem.calculatedCount !== null)
+            ? trainingItem.calculatedCount
+            : (trainingItem.userModified
+                ? trainingItem.required
+                : GAME_DATA.trainingPresets[trainingItem.tier][floor]);
+
+        const completed = trainingItem.completed || 0;
+        const isMet = displayRequired <= 0 || completed >= displayRequired;
             const remaining = isMet ? 0 : Math.max(0, displayRequired - completed);
 
             return `
@@ -812,29 +812,19 @@ training: {
 
     // 一键撤销分类
     const handleResetCategory = (category) => {
-    if (!category || !state.training || !state.training[category]) {
-        console.error('无效的历练类别:', category);
-        return;
-    }
-
     if (confirm(`确定要重置【${getCategoryName(category)}】的所有进度吗？`)) {
         const floors = [4, 6, 8, 10, 12];
         
-        state.training[category] = state.training[category].map((item, index) => {
-            const floor = floors[index];
-            return {
-                // 保留当前修为等级
-                tier: item.tier,
-                // 重置为初始状态
-                completed: 0,
-                // 使用当前修为等级对应的预设值
-                required: GAME_DATA.trainingPresets[item.tier][floor],
-                // 清除所有修改状态
-                userModified: false,
-                // 关键修复：清除计算结果
-                calculatedCount: undefined
-            };
-        });
+        state.training[category] = state.training[category].map((item, index) => ({
+            completed: 0,
+            required: GAME_DATA.trainingPresets[17][floors[index]], // 强制重置为17阶需求
+            userModified: false,
+            tier: 17,
+            calculatedCount: undefined // 清除计算结果
+        }));
+
+        // 重置完成记录
+        state.trainingCompletions[category] = {13: 0, 15: 0, 17: 0};
         
         // 清除相关历史记录
         state.trainingHistory = state.trainingHistory.filter(
@@ -1256,10 +1246,16 @@ const migrateOldData = (savedData) => {
 };
     // 更新并保存数据
     const updateAndSave = () => {
-        state.lastUpdated = new Date().toISOString();
-        saveData();
-        renderAll();
-    };
+    state.lastUpdated = new Date().toISOString();
+    saveData();
+    
+    // 强制重新计算历练状态
+    ['yinYang', 'windFire', 'earthWater'].forEach(category => {
+        if (dom[`${category}Training`]) {
+            renderTrainingCategory(category, dom[`${category}Training`]);
+        }
+    });
+};
 
     // 保存数据到本地存储
     const saveData = () => {
@@ -1277,10 +1273,10 @@ const migrateOldData = (savedData) => {
             const floor = [4, 6, 8, 10, 12][index];
             return {
                 completed: 0,
-                required: GAME_DATA.trainingPresets[17][floor], // 强制绑定修为17阶
+                required: GAME_DATA.trainingPresets[17][floor], // 强制使用17阶预设值
                 userModified: false,
-                tier: 17, // 明确指定修为等级
-                calculatedCount: 0  // 清零计算结果
+                tier: 17,
+                calculatedCount: undefined // 明确设为undefined而不是0
             };
         });
 
@@ -1292,7 +1288,7 @@ const migrateOldData = (savedData) => {
             acc[cur.id] = false;
             return acc;
         }, {}),
-        trainingCompletions: {  // 完全重置完成记录
+        trainingCompletions: {
             yinYang: {13: 0, 15: 0, 17: 0},
             windFire: {13: 0, 15: 0, 17: 0},
             earthWater: {13: 0, 15: 0, 17: 0}
@@ -1306,22 +1302,10 @@ const migrateOldData = (savedData) => {
             classes: { guidao: false, shenji: false, qihuang: false, longdun: false, pojun: false },
             attributes: { yin: false, yang: false, feng: false, huo: false, di: false, shui: false }
         },
-        trainingHistory: [],
+        trainingHistory: [], // 清空历史记录
         lastUpdated: new Date().toISOString()
     };
 };
-
-    // 初始化职业状态
-    const getClassKey = (className) => {
-        const map = {
-            '诡道': 'guidao',
-            '神纪': 'shenji',
-            '岐黄': 'qihuang',
-            '龙盾': 'longdun',
-            '破军': 'pojun'
-        };
-        return map[className] || '';
-    };
 
     // ==================== 公共接口 ====================
 return {
