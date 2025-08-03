@@ -196,7 +196,8 @@ const safelyMergeMaterials = (savedMaterials, defaultMaterials) => {
 
     GAME_DATA.materials.forEach(material => {
         if (material.id in savedMaterials) {
-            merged[material.id] = !!savedMaterials[material.id]; // 确保转换为布尔值
+            // 确保转换为布尔值
+            merged[material.id] = !!savedMaterials[material.id];
         }
     });
     return merged;
@@ -208,10 +209,19 @@ const safelyMergeMaterials = (savedMaterials, defaultMaterials) => {
     return savedData.map((item, index) => {
         const defaultItem = defaultData[index] || {};
         return {
+            // 关键：确保完成进度正确恢复
             completed: item.completed || 0,
-            required: item.userModified ? item.required : defaultItem.required,
+            
+            // 正确恢复需求值
+            required: item.required || defaultItem.required,
+            
+            // 保留用户自定义修改状态
             userModified: item.userModified || false,
+            
+            // 正确恢复修为等级
             tier: item.tier || defaultItem.tier || 17,
+            
+            // 保留计算结果
             calculatedCount: item.calculatedCount || 0
         };
     });
@@ -359,30 +369,42 @@ const setupCultivationListeners = () => {
         // 3. 获取基础重置状态
         const baseState = resetState();
 
-        // 4. 安全合并数据（关键修复：避免旧数据污染）
+        // 4. 安全合并数据（关键修复：确保所有状态正确恢复）
         state = {
             // 基础重置状态
             ...baseState,
             
-            // 允许覆盖的字段
+            // 允许覆盖的字段 - 修复金钱和经验状态
+            moneyChecked: parsed.moneyChecked !== undefined ? parsed.moneyChecked : baseState.moneyChecked,
+            fragments: parsed.fragments !== undefined ? parsed.fragments : baseState.fragments,
+            scrolls: parsed.scrolls !== undefined ? parsed.scrolls : baseState.scrolls,
+            
+            // 材料状态
             materials: safelyMergeMaterials(parsed.materials, baseState.materials),
+            
+            // 目标选择状态
             targetSelection: parsed.targetSelection || baseState.targetSelection,
+            
+            // 历练历史记录
             trainingHistory: Array.isArray(parsed.trainingHistory) 
                 ? parsed.trainingHistory 
                 : baseState.trainingHistory,
             
-            // 特殊处理training数据
-training: {
-        yinYang: mergeTrainingData(parsed.training?.yinYang, baseState.training.yinYang),
-        windFire: mergeTrainingData(parsed.training?.windFire, baseState.training.windFire),
-        earthWater: mergeTrainingData(parsed.training?.earthWater, baseState.training.earthWater)
-    },
-    
-    // 强制重置完成记录
-    trainingCompletions: parsed.trainingCompletions || { ...baseState.trainingCompletions }
-};
+            // 历练完成记录
+            trainingCompletions: parsed.trainingCompletions || { ...baseState.trainingCompletions },
+            
+            // 特殊处理training数据 - 修复历练进度状态
+            training: {
+                yinYang: mergeTrainingData(parsed.training?.yinYang, baseState.training.yinYang),
+                windFire: mergeTrainingData(parsed.training?.windFire, baseState.training.windFire),
+                earthWater: mergeTrainingData(parsed.training?.earthWater, baseState.training.earthWater)
+            }
+        };
 
         console.log('数据加载完成', { 
+            moneyChecked: state.moneyChecked,
+            fragments: state.fragments,
+            scrolls: state.scrolls,
             loadedMaterials: Object.keys(state.materials).length,
             trainingStats: Object.keys(state.training).map(k => ({
                 category: k,
@@ -406,12 +428,18 @@ training: {
     
     return state.training[category].reduce((min, item, index) => {
         const floor = [4, 6, 8, 10, 12][index];
-        const required = item.userModified 
-            ? item.required 
-            : (GAME_DATA.trainingPresets[tier]?.[floor] || 1); // 防止undefined
-        return Math.min(min, Math.floor((item.completed || 0) / required));
+        
+        // 使用统一的需求计算函数 - 确保正确计算需求
+        const required = getActualRequired(item, floor);
+        
+        // 计算当前完成度（避免除以零）
+        if (required <= 0) return min;
+        
+        const completedRatio = Math.floor((item.completed || 0) / required);
+        return Math.min(min, completedRatio);
     }, Infinity) || 0;
 };
+
     // ==================== setupDOM 函数 ====================
     const setupDOM = () => {
     try {
@@ -770,15 +798,24 @@ training: {
 
     // 计算经验值状态
     const calculateExpStatus = () => {
-        const currentExp = state.fragments * 100 + state.scrolls * 1000;
-        const isMet = currentExp >= CONFIG.requiredExp;
-        return {
-            isMet,
-            text: isMet ? '已满足' : '未满足',
-            className: `sub-status-indicator ${isMet ? 'met' : 'not-met'}`
-        };
-    };
+    const currentExp = state.fragments * 100 + state.scrolls * 1000;
+    const isMet = currentExp >= CONFIG.requiredExp;
     
+    // 显示明确的经验状态
+    let statusText;
+    if (isMet) {
+        statusText = '已满足';
+    } else {
+        const needed = CONFIG.requiredExp - currentExp;
+        statusText = `还需 ${needed} 经验`;
+    }
+    
+    return {
+        isMet,
+        text: statusText,
+        className: `sub-status-indicator ${isMet ? 'met' : 'not-met'}`
+    };
+};
 
     // 检查通用升级材料是否满足
     const checkBaseConditions = (expStatus) => {
@@ -1373,14 +1410,26 @@ const migrateOldData = (savedData) => {
     // 更新并保存数据
     const updateAndSave = () => {
     state.lastUpdated = new Date().toISOString();
+    
+    // 强制更新经验状态显示
+    const expStatus = calculateExpStatus();
+    if (dom.expStatus) {
+        dom.expStatus.textContent = expStatus.text;
+        dom.expStatus.className = expStatus.className;
+    }
+    
+    // 强制更新金钱状态
+    if (dom.moneyCheck) {
+        dom.moneyCheck.checked = state.moneyChecked;
+    }
+    
+    // 保存数据
     saveData();
     
-    // 强制重新计算历练状态
-    ['yinYang', 'windFire', 'earthWater'].forEach(category => {
-        if (dom[`${category}Training`]) {
-            renderTrainingCategory(category, dom[`${category}Training`]);
-        }
-    });
+    // 更新历练显示
+    if (dom.yinYangTraining) renderTrainingCategory('yinYang', dom.yinYangTraining);
+    if (dom.windFireTraining) renderTrainingCategory('windFire', dom.windFireTraining);
+    if (dom.earthWaterTraining) renderTrainingCategory('earthWater', dom.earthWaterTraining);
 };
 
     // 保存数据到本地存储
