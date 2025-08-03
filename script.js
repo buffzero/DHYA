@@ -960,6 +960,9 @@ const setupCultivationListeners = () => {
 
     // 一键撤销分类
     const handleResetCategory = (category) => {
+     if (this.resetting) return;
+    this.resetting = true;
+     
     if (confirm(`确定要重置【${getCategoryName(category)}】的所有进度吗？`)) {
         const floors = [4, 6, 8, 10, 12];
         
@@ -986,6 +989,7 @@ const setupCultivationListeners = () => {
         
         updateAndSave(); // 触发重新渲染
     }
+     state.resetting = false;
 };
 
     // 获取分类名称
@@ -1119,11 +1123,13 @@ const setupCultivationListeners = () => {
             }
 
             // 一键撤销分类
-            if (e.target.classList.contains('reset-category-btn')) {
-                handleResetCategory(e.target.dataset.category);
-                return;
-            }
-        });
+             if (e.target.classList.contains('reset-category-btn')) {
+            e.stopPropagation(); // 阻止事件冒泡
+            handleResetCategory(e.target.dataset.category);
+            return;
+        }
+    });
+
 
         // 4. 独立监听的元素
         dom.moneyCheck.addEventListener('change', () => {
@@ -1506,13 +1512,12 @@ const migrateOldData = (savedData) => {
  
      const bindTrainingEvents = (container) => {
         // 绑定撤销按钮
-        container.querySelectorAll('.undo-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const category = e.target.dataset.category;
-                const index = parseInt(e.target.dataset.index);
-                handleUndo(category, index);
-            });
+        container.querySelectorAll('.reset-category-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation(); // 阻止事件冒泡
+            handleResetCategory(e.target.dataset.category);
         });
+    });
         
         // 绑定一键撤销分类按钮
         container.querySelectorAll('.reset-category-btn').forEach(btn => {
