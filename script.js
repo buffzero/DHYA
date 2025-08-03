@@ -390,37 +390,38 @@ const setupCultivationListeners = () => {
                 : baseState.trainingHistory,
             
             // 关键修复：正确恢复历练完成状态
-           trainingCompletions: parsed.trainingCompletions
-    ? {...baseState.trainingCompletions, ...parsed.trainingCompletions}
-    : baseState.trainingCompletions,
+            trainingCompletions: parsed.trainingCompletions
+                ? {...baseState.trainingCompletions, ...parsed.trainingCompletions}
+                : baseState.trainingCompletions,
 
-// 特殊处理training数据 - 修复历练进度状态
-training: {
-    yinYang: mergeTrainingData(parsed.training?.yinYang, baseState.training.yinYang),
-    windFire: mergeTrainingData(parsed.training?.windFire, baseState.training.windFire),
-    earthWater: mergeTrainingData(parsed.training?.earthWater, baseState.training.earthWater)
-},
+            // 特殊处理training数据 - 修复历练进度状态
+            training: {
+                yinYang: mergeTrainingData(parsed.training?.yinYang, baseState.training.yinYang),
+                windFire: mergeTrainingData(parsed.training?.windFire, baseState.training.windFire),
+                earthWater: mergeTrainingData(parsed.training?.earthWater, baseState.training.earthWater)
+            }
+        };
 
-// 关键修复：确保completed不会大于required
-['yinYang', 'windFire', 'earthWater'].forEach(category => {
-    if (state.training[category]) {
-        state.training[category].forEach(item => {
-            if (item.completed > item.required) {
-                item.completed = item.required;
+        // 关键修复：确保completed不会大于required
+        ['yinYang', 'windFire', 'earthWater'].forEach(category => {
+            if (state.training[category]) {
+                state.training[category].forEach(item => {
+                    if (item.completed > item.required) {
+                        item.completed = item.required;
+                    }
+                });
             }
         });
-    }
-});
 
-console.log('数据加载完成', {
-    moneyChecked: state.moneyChecked,
-    fragments: state.fragments,
-    scrolls: state.scrolls,
-    loadedMaterials: Object.keys(state.materials).length,
-    trainingCompletions: state.trainingCompletions
-});
+        console.log('数据加载完成', {
+            moneyChecked: state.moneyChecked,
+            fragments: state.fragments,
+            scrolls: state.scrolls,
+            loadedMaterials: Object.keys(state.materials).length,
+            trainingCompletions: state.trainingCompletions
+        });
 
-updateLastUpdated();
+        updateLastUpdated();
 
     } catch (e) {
         console.error('数据加载过程中出现严重错误:', e);
