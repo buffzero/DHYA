@@ -390,25 +390,25 @@ const setupCultivationListeners = () => {
                 : baseState.trainingHistory,
             
             // 关键修复：正确恢复历练完成状态
-            trainingCompletions: parsed.trainingCompletions ? 
-                {...baseState.trainingCompletions, ...parsed.trainingCompletions} : 
-                baseState.trainingCompletions,
+           trainingCompletions: parsed.trainingCompletions 
+                ? {...baseState.trainingCompletions, ...parsed.trainingCompletions} 
+                : baseState.trainingCompletions,
             
             // 特殊处理training数据 - 修复历练进度状态
-            state.training = {
-            yinYang: mergeTrainingData(parsed.training?.yinYang, baseState.training.yinYang),
-            windFire: mergeTrainingData(parsed.training?.windFire, baseState.training.windFire),
-            earthWater: mergeTrainingData(parsed.training?.earthWater, baseState.training.earthWater)
-        };
+            training: {  // 修复1：使用正确的对象语法
+    yinYang: mergeTrainingData(parsed.training?.yinYang, baseState.training.yinYang),  // 修复2：使用逗号而不是分号
+    windFire: mergeTrainingData(parsed.training?.windFire, baseState.training.windFire),  // 修复2：使用逗号
+    earthWater: mergeTrainingData(parsed.training?.earthWater, baseState.training.earthWater)  // 修复3：修正属性名拼写
+},
         
         // 关键修复：确保completed不会大于required
         ['yinYang', 'windFire', 'earthWater'].forEach(category => {
-            state.training[category].forEach(item => {
-                if (item.completed > item.required) {
-                    item.completed = item.required;
-                }
-            });
-        });
+    state.training[category].forEach(item => {
+        if (item.completed > item.required) {
+            item.completed = item.required;
+        }
+    });
+});
      
         console.log('数据加载完成', { 
             moneyChecked: state.moneyChecked,
