@@ -208,20 +208,20 @@ const safelyMergeMaterials = (savedMaterials, defaultMaterials) => {
     
     return savedData.map((item, index) => {
         const defaultItem = defaultData[index] || {};
+        
+        // 确保completed不会大于required
+        let completed = item.completed || 0;
+        let required = item.required || defaultItem.required;
+        
+        if (completed > required) {
+            completed = required;
+        }
+        
         return {
-            // 关键：确保完成进度正确恢复
-            completed: item.completed || 0,
-            
-            // 正确恢复需求值
-            required: item.required || defaultItem.required,
-            
-            // 保留用户自定义修改状态
+            completed: completed,
+            required: required,
             userModified: item.userModified || false,
-            
-            // 正确恢复修为等级
             tier: item.tier || defaultItem.tier || 17,
-            
-            // 保留计算结果
             calculatedCount: item.calculatedCount || 0
         };
     });
@@ -395,12 +395,20 @@ const setupCultivationListeners = () => {
                 baseState.trainingCompletions,
             
             // 特殊处理training数据 - 修复历练进度状态
-            training: {
-                yinYang: mergeTrainingData(parsed.training?.yinYang, baseState.training.yinYang),
-                windFire: mergeTrainingData(parsed.training?.windFire, baseState.training.windFire),
-                earthWater: mergeTrainingData(parsed.training?.earthWater, baseState.training.earthWater)
-            }
+            state.training = {
+            yinYang: mergeTrainingData(parsed.training?.yinYang, baseState.training.yinYang),
+            windFire: mergeTrainingData(parsed.training?.windFire, baseState.training.windFire),
+            earthWater: mergeTrainingData(parsed.training?.earthWater, baseState.training.earthWater)
         };
+        
+        // 关键修复：确保completed不会大于required
+        ['yinYang', 'windFire', 'earthWater'].forEach(category => {
+            state.training[category].forEach(item => {
+                if (item.completed > item.required) {
+                    item.completed = item.required;
+                }
+            });
+        });
      
         console.log('数据加载完成', { 
             moneyChecked: state.moneyChecked,
@@ -701,14 +709,13 @@ const setupCultivationListeners = () => {
                 </div>
             </div>
         </div>
-        ${state.training[category].map((trainingItem, index) => {
+         ${state.training[category].map((trainingItem, index) => {
             const floor = floors[index];
-            
-            // 使用统一函数计算实际需求 - 替换原有逻辑
             const actualRequired = getActualRequired(trainingItem, floor);
-            
             const completed = trainingItem.completed || 0;
-            const isMet = completed >= actualRequired;
+            
+            // 关键修复：处理required为0的情况
+            const isMet = actualRequired > 0 ? (completed >= actualRequired) : true;
             const remaining = isMet ? 0 : Math.max(0, actualRequired - completed);
 
             return `
@@ -1443,13 +1450,13 @@ const migrateOldData = (savedData) => {
     // 重置初始化状态
     const resetState = () => {
     const initTraining = (category) => 
-    [4, 6, 8, 10, 12].map(floor => ({
-      completed: 0,
-      required: GAME_DATA.trainingPresets[17][floor],
-      userModified: false,
-      tier: 17,
-      calculatedCount: null
-    }));
+        [4, 6, 8, 10, 12].map(floor => ({
+            completed: 0,  // 确保初始化为0
+            required: GAME_DATA.trainingPresets[17][floor],
+            userModified: false,
+            tier: 17,
+            calculatedCount: null
+        }));
   
 
     return {
@@ -1465,10 +1472,10 @@ const migrateOldData = (savedData) => {
             windFire: {13: 0, 15: 0, 17: 0},
             earthWater: {13: 0, 15: 0, 17: 0}
         },
-        training: {
-             yinYang: initTraining('yinYang'),
-             windFire: initTraining('windFire'),
-             earthWater: initTraining('earthWater')
+       training: {
+            yinYang: initTraining('yinYang'),
+            windFire: initTraining('windFire'),
+            earthWater: initTraining('earthWater')
         },
         targetSelection: {
             classes: { guidao: false, shenji: false, qihuang: false, longdun: false, pojun: false },
