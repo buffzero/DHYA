@@ -98,16 +98,28 @@ const ResourceTracker = (() => {
             ]
         },
         trainingPresets: {
-            13: { 
-                4: 6,   // 历练四需要6次
-                6: 12,  // 历练六需要12次
-                8: 24,  // 历练八需要24次
-                10: 16, // 历练十需要16次
-                12: 1   // 历练十二需要1次
-            },
-            15: { 4: 6, 6: 12, 8: 24, 10: 35, 12: 12 },
-            17: { 4: 6, 6: 12, 8: 24, 10: 35, 12: 47 }
+        13: { 
+            4: 6,   // 历练四需要6次
+            6: 12,  // 历练六需要12次
+            8: 24,  // 历练八需要24次
+            10: 16, // 历练十需要16次
+            12: 1   // 历练十二需要1次
+        },
+        15: { 
+            4: 6, 
+            6: 12, 
+            8: 24, 
+            10: 35, 
+            12: 12 
+        },
+        17: { 
+            4: 6, 
+            6: 12, 
+            8: 24, 
+            10: 35, 
+            12: 47 
         }
+    }
     };
 
     // 格式化日期显示
@@ -125,8 +137,6 @@ const ResourceTracker = (() => {
  
       // 统一的需求计算函数
 const getActualRequired = (trainingItem, floor) => {
-    const tier = trainingItem.tier || 17;
-    
     // 1. 优先使用计算值
     if (trainingItem.calculatedCount !== null && 
         trainingItem.calculatedCount !== undefined) {
@@ -139,9 +149,9 @@ const getActualRequired = (trainingItem, floor) => {
     }
     
     // 3. 使用预设值
-    return GAME_DATA.trainingPresets[tier][floor];
+    return GAME_DATA.trainingPresets[trainingItem.tier || 17][floor];
 };
- 
+
     // 新增职业键名映射函数
     const getClassKey = (className) => {
         const map = {
@@ -209,7 +219,7 @@ const safelyMergeMaterials = (savedMaterials, defaultMaterials) => {
     return savedData.map((item, index) => {
         const defaultItem = defaultData[index] || {};
         
-        // 确保completed不会大于required
+        // 确保 completed 不会大于 required
         let completed = item.completed || 0;
         let required = item.required || defaultItem.required;
         
@@ -222,7 +232,8 @@ const safelyMergeMaterials = (savedMaterials, defaultMaterials) => {
             required: required,
             userModified: item.userModified || false,
             tier: item.tier || defaultItem.tier || 17,
-            calculatedCount: item.calculatedCount || 0
+            // 关键修复：正确加载 calculatedCount
+            calculatedCount: item.calculatedCount !== undefined ? item.calculatedCount : null
         };
     });
 };
@@ -712,16 +723,21 @@ const setupCultivationListeners = () => {
                 </div>
             </div>
         </div>
-         ${state.training[category].map((trainingItem, index) => {
+        ${state.training[category].map((trainingItem, index) => {
             const floor = floors[index];
             const actualRequired = getActualRequired(trainingItem, floor);
             const completed = trainingItem.completed || 0;
             
-            // 关键修复：处理required为0的情况
-            const isMet = actualRequired > 0 ? (completed >= actualRequired) : true;
-            const remaining = isMet ? 0 : Math.max(0, actualRequired - completed);
+            // 关键：优先显示计算结果
+            const displayCount = trainingItem.calculatedCount !== null ? 
+                trainingItem.calculatedCount : 
+                actualRequired;
+                
+            const isMet = completed >= displayCount;
+            const remaining = isMet ? 0 : Math.max(0, displayCount - completed);
 
-            return `
+
+           return `
             <div class="training-item">
                 <div class="training-header">
                     <div class="training-name">${GAME_DATA.training[category][index].name}</div>
@@ -730,13 +746,13 @@ const setupCultivationListeners = () => {
                             class="training-count-input" 
                             data-category="${category}" 
                             data-index="${index}"
-                            value="${actualRequired}">
+                            value="${displayCount}">  <!-- 显示 displayCount 而不是 actualRequired -->
                         <div class="sub-status-indicator ${isMet ? 'met' : 'not-met'}">
-                            ${isMet ? '已满足' : `${completed}/${actualRequired}`}
+                            ${isMet ? '已满足' : `${completed}/${displayCount}`}  <!-- 显示 displayCount -->
                         </div>
                     </div>
                 </div>
-                ${renderCircles(actualRequired, completed)}
+                ${renderCircles(displayCount, completed)}  <!-- 使用 displayCount -->
                 <div class="training-actions">
                     <button class="consume-btn" 
                         data-category="${category}" 
@@ -925,16 +941,12 @@ const setupCultivationListeners = () => {
     state.training[category] = state.training[category].map((item, index) => {
         const floor = floors[index];
         return {
-            // 保持原有完成进度
             completed: item.completed || 0,
-            // 更新为新的修为需求
             required: GAME_DATA.trainingPresets[tier][floor],
-            // 保留用户自定义修改状态
             userModified: item.userModified || false,
-            // 更新修为等级
             tier: parseInt(tier),
             // 保留计算结果
-            calculatedCount: item.calculatedCount ?? undefined
+            calculatedCount: item.calculatedCount  // 不重置计算结果
         };
     });
 
@@ -1370,17 +1382,20 @@ const calculateAndApply = () => {
     }
 
     // 6. 更新状态
-    const floors = [4, 6, 8, 10, 12];
+     const floors = [4, 6, 8, 10, 12];
     floors.forEach((floor, index) => {
-        if (!state.training[category][index]) {
+        const count = trainingCounts[floor] || 0;
+        if (state.training[category][index]) {
+            state.training[category][index].calculatedCount = count;
+        } else {
             state.training[category][index] = {
                 completed: 0,
                 required: GAME_DATA.trainingPresets[tier][floor],
                 userModified: false,
-                tier: tier
+                tier: tier,
+                calculatedCount: count
             };
         }
-        state.training[category][index].calculatedCount = trainingCounts[floor];
     });
 
     // 7. 保存数据并重新渲染
@@ -1454,11 +1469,11 @@ const migrateOldData = (savedData) => {
     const resetState = () => {
     const initTraining = (category) => 
         [4, 6, 8, 10, 12].map(floor => ({
-            completed: 0,  // 确保初始化为0
+            completed: 0,
             required: GAME_DATA.trainingPresets[17][floor],
             userModified: false,
             tier: 17,
-            calculatedCount: null
+            calculatedCount: null  // 确保初始化为 null
         }));
   
 
