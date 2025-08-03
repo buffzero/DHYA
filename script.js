@@ -385,13 +385,14 @@ const setupCultivationListeners = () => {
             // 目标选择状态
             targetSelection: parsed.targetSelection || baseState.targetSelection,
             
-            // 历练历史记录
             trainingHistory: Array.isArray(parsed.trainingHistory) 
                 ? parsed.trainingHistory 
                 : baseState.trainingHistory,
             
-            // 历练完成记录
-            trainingCompletions: parsed.trainingCompletions || { ...baseState.trainingCompletions },
+            // 关键修复：正确恢复历练完成状态
+            trainingCompletions: parsed.trainingCompletions ? 
+                {...baseState.trainingCompletions, ...parsed.trainingCompletions} : 
+                baseState.trainingCompletions,
             
             // 特殊处理training数据 - 修复历练进度状态
             training: {
@@ -400,16 +401,13 @@ const setupCultivationListeners = () => {
                 earthWater: mergeTrainingData(parsed.training?.earthWater, baseState.training.earthWater)
             }
         };
-
+     
         console.log('数据加载完成', { 
             moneyChecked: state.moneyChecked,
             fragments: state.fragments,
             scrolls: state.scrolls,
             loadedMaterials: Object.keys(state.materials).length,
-            trainingStats: Object.keys(state.training).map(k => ({
-                category: k,
-                count: state.training[k].length
-            }))
+            trainingCompletions: state.trainingCompletions
         });
 
         updateLastUpdated();
@@ -422,6 +420,7 @@ const setupCultivationListeners = () => {
         alert('存档数据损坏，已重置为初始状态');
     }
 };
+
     // 检查历练完成情况
    const checkTrainingCompletion = (category, tier) => {
     if (!state.training[category]) return 0;
@@ -439,7 +438,6 @@ const setupCultivationListeners = () => {
         return Math.min(min, completedRatio);
     }, Infinity) || 0;
 };
-
     // ==================== setupDOM 函数 ====================
     const setupDOM = () => {
     try {
@@ -671,7 +669,7 @@ const setupCultivationListeners = () => {
         const currentProgress = checkTrainingCompletion(category, tier);
         const available = Math.max(0, currentProgress - completed);
         
-        if (completed > 0 || available > 0) {
+        if (currentProgress > 0 || completed > 0) {
             return `
                 <span class="completion-badge tier-${tier} 
                     ${available > 0 ? 'available' : ''}"
@@ -876,18 +874,19 @@ const setupCultivationListeners = () => {
     // 更新状态
     trainingItem.completed += actualCount;
 
-    // 更新修为完成记录
-    [13, 15, 17].forEach(tier => {
-        const totalAvailable = checkTrainingCompletion(category, tier);
-        const alreadyCompleted = state.trainingCompletions[category][tier] || 0;
-        
-        if (totalAvailable > alreadyCompleted) {
-            state.trainingCompletions[category][tier] = totalAvailable;
-        }
-    });
+    // 关键修复：更新修为完成记录
+    const currentTier = trainingItem.tier;
+    const currentProgress = checkTrainingCompletion(category, currentTier);
+    const alreadyCompleted = state.trainingCompletions[category][currentTier] || 0;
+    
+    // 只有当新进度大于已记录进度时才更新
+    if (currentProgress > alreadyCompleted) {
+        state.trainingCompletions[category][currentTier] = currentProgress;
+    }
 
     updateAndSave();
 };
+
  
     // 处理撤销操作
     const handleUndo = (category, index) => {
