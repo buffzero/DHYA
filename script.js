@@ -1189,13 +1189,28 @@ const MATERIAL_REQUIREMENTS = {
 
 // 历练层数与材料关系
 const TRAINING_RELATIONS = {
-  4: ['juanShan', 'cuiShan'], // 历练四：绢扇/浊酒/铜镜 + 翠扇/清酒/六博镜
-  6: ['cuiShan', 'jinShan'],  // 历练六：翠扇/清酒/六博镜 + 金丝扇/百末旨酒/鎏金镜
-  8: ['jinShan', 'yuShan'],   // 历练八：金丝扇/百末旨酒/鎏金镜 + 羽扇/灵山泉/宝石镜
-  10: ['yuShan', 'xianShan'], // 历练十：羽扇/灵山泉/宝石镜 + 仙门扇/霸王泪/水镜
-  12: ['xianShan', 'beiShan'] // 历练十二：仙门扇/霸王泪/水镜 + 悲回风扇/星汉镜/木兰坠露
+  windFire: {
+    4: ['juanShan', 'cuiShan'],
+    6: ['cuiShan', 'jinShan'],
+    8: ['jinShan', 'yuShan'],
+    10: ['yuShan', 'xianShan'],
+    12: ['xianShan', 'beiShan']
+  },
+  yinYang: {
+    4: ['tongJing', 'liuJing'],
+    6: ['liuJing', 'liuJinJing'],
+    8: ['liuJinJing', 'baoShiJing'],
+    10: ['baoShiJing', 'shuiJing'],
+    12: ['shuiJing', 'xingHanJing']
+  },
+  earthWater: {
+    4: ['zhuoJiu', 'qingJiu'],
+    6: ['qingJiu', 'baiJiu'],
+    8: ['baiJiu', 'lingQuan'],
+    10: ['lingQuan', 'baWangLei'],
+    12: ['baWangLei', 'muLan']
+  }
 };
-
 
 // 历练关卡材料掉落
 const TRAINING_DROPS = {
@@ -1226,7 +1241,7 @@ const calculateTrainingCount = (requirements, userMaterials, level, material) =>
 const updateMaterialGaps = (requirements, userMaterials, level, count) => {
     if (count <= 0) return;
     
-    const materials = TRAINING_RELATIONS[level];
+    const materials = TRAINING_RELATIONS[category][level];
     const drops = TRAINING_DROPS[level];
     
     // 主材料扣除（严格类型检查）
