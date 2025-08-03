@@ -943,3 +943,56 @@ input[type="checkbox"] {
   align-items: center;
   gap: 10px;
 }
+
+/* 移动端优化 - 修为材料输入框两列布局 */
+@media (max-width: 600px) {
+  /* 修改材料输入框为两列布局 */
+  .material-inputs {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.8rem !important;
+    padding: 10px !important;
+  }
+  
+  /* 调整标签文字大小和间距 */
+  .material-input label {
+    font-size: 0.85rem !important;
+    margin-bottom: 4px !important;
+  }
+  
+  /* 调整输入框高度 */
+  .material-input input {
+    padding: 6px 8px !important;
+    font-size: 0.9rem !important;
+    height: 36px !important;
+  }
+  
+  /* 确保选择器在移动端正确显示 */
+  .cultivation-controls {
+    flex-direction: column;
+    gap: 0.8rem;
+    padding: 12px 15px;
+  }
+  
+  .cultivation-controls > div {
+    width: 100%;
+  }
+  
+  /* 计算按钮优化 */
+  #calculate-cultivation {
+    padding: 10px 16px !important;
+    font-size: 1rem !important;
+    margin-top: 12px !important;
+  }
+}
+
+/* 确保在PC端保持原有布局 */
+@media (min-width: 601px) {
+  .material-inputs {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
+
+/* 添加标题与输入框之间的间距 */
+.cultivation-controls {
+  margin-bottom: 8px;
+}
