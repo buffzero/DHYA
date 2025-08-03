@@ -1343,9 +1343,10 @@ const calculateAndApply = () => {
     // 5. 按顺序计算各层历练次数（4→6→8→10→12）
     const trainingCounts = {4:0, 6:0, 8:0, 10:0, 12:0};
     
+    // 修复点1：使用正确的 TRAINING_RELATIONS 结构
     // 历练4层计算
     const level4 = 4;
-    const level4Mats = TRAINING_RELATIONS[level4];
+    const level4Mats = TRAINING_RELATIONS[category][level4]; // 修复：添加 [category]
     const level4PrimaryGap = Math.max(0, requirements[level4Mats[0]] - currentStock[level4Mats[0]]);
     trainingCounts[level4] = Math.ceil(level4PrimaryGap / TRAINING_DROPS[level4].primary);
     
@@ -1355,7 +1356,7 @@ const calculateAndApply = () => {
     
     // 历练6层计算
     const level6 = 6;
-    const level6Mats = TRAINING_RELATIONS[level6];
+    const level6Mats = TRAINING_RELATIONS[category][level6]; // 修复：添加 [category]
     const level6PrimaryGap = Math.max(0, requirements[level6Mats[0]] - currentStock[level6Mats[0]]);
     trainingCounts[level6] = Math.ceil(level6PrimaryGap / TRAINING_DROPS[level6].primary);
     
@@ -1365,7 +1366,7 @@ const calculateAndApply = () => {
     
     // 历练8层计算
     const level8 = 8;
-    const level8Mats = TRAINING_RELATIONS[level8];
+    const level8Mats = TRAINING_RELATIONS[category][level8]; // 修复：添加 [category]
     const level8PrimaryGap = Math.max(0, requirements[level8Mats[0]] - currentStock[level8Mats[0]]);
     trainingCounts[level8] = Math.ceil(level8PrimaryGap / TRAINING_DROPS[level8].primary);
     
@@ -1375,7 +1376,7 @@ const calculateAndApply = () => {
     
     // 历练10层计算
     const level10 = 10;
-    const level10Mats = TRAINING_RELATIONS[level10];
+    const level10Mats = TRAINING_RELATIONS[category][level10]; // 修复：添加 [category]
     const level10PrimaryGap = Math.max(0, requirements[level10Mats[0]] - currentStock[level10Mats[0]]);
     trainingCounts[level10] = Math.ceil(level10PrimaryGap / TRAINING_DROPS[level10].primary);
     
@@ -1385,7 +1386,7 @@ const calculateAndApply = () => {
     
     // 历练12层计算（特殊处理）
     const level12 = 12;
-    const level12Mats = TRAINING_RELATIONS[level12];
+    const level12Mats = TRAINING_RELATIONS[category][level12]; // 修复：添加 [category]
     
     // 先计算悲回风扇（唯一来源）
     const beiShanGap = Math.max(0, requirements[level12Mats[1]] - currentStock[level12Mats[1]]);
